@@ -10,8 +10,8 @@ from Funciones import SelectNMMEFiles
 # ---------------------------------------------------------------------------- #
 out_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
 save_nc = False
-#variables = ['hgt', 'tref', 'prec', 'T0995sigma']
-variables = ['prec', 'T0995sigma']
+variables = ['hgt', 'tref', 'prec', 'T0995sigma']
+
 # Funciones ------------------------------------------------------------------ #
 def fix_calendar(ds, timevar='time'):
     """
@@ -184,7 +184,6 @@ for v in variables:
             data = data.sel(lat=slice(-60, 15))
         data = data.sel(r=slice(1, 24))
 
-    #
     # data = xr.open_mfdataset(files, decode_times=False).sel(
     #     L=[0.5, 1.5, 2.5, 3.5], M=slice(1,24), Y=slice(-70, 20))
     # data['L'] = [0,1,2,3]
