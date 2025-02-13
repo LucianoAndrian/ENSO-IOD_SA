@@ -1,19 +1,23 @@
 '''
-Validacion climatologica CFSv2 SON HGT200 contra ERA5
+Validacion climatologica CFSv2 SON con
 Periodo: 1981-2020
 Con y sin tendencia
 '''
 # ---------------------------------------------------------------------------- #
 save = True
 out_dir = '/pikachu/datos/luciano.andrian/val_clim_cfsv2/'
-out_dir_proc = '/pikachu/datos/luciano.andrian/paper2/'
-variables = ['prec']#, 'tref', 'T09955sigma']#, 'hgt']
+out_dir_proc = '/pikachu/datos/luciano.andrian/paper2/salidas_nc/'
+
+variables = ['prec', 'tref']#, 'T09955sigma']#, 'hgt']
+print('# ------------------------------------------------------------------- #')
+print('# Tsigma y hgt no configurado --------------------------------------- #')
+print('# ------------------------------------------------------------------- #')
 # ---------------------------------------------------------------------------- #
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind
-from Funciones import SelectNMMEFiles
+from Funciones import SelectNMMEFiles, ChangeLons
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -101,6 +105,27 @@ def CheckFiles(dir, files):
     compute = not all(os.path.isfile(os.path.join(dir, f)) for f in files)
     return compute
 
+def SetDataCFSv2(data):
+    data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
+    data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24),
+                    lon=slice(275, 331), lat=slice(-70, 20))
+    data['L'] = [0, 1, 2, 3]
+    data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
+
+    return data
+
+def SplitFilesByMonotonicity(files):
+    """ Divide la lista de archivos en segmentos donde el índice S
+    sea monotónico """
+    for i in range(1, len(files)):
+        try:
+            # Intentar abrir los archivos hasta el índice i
+            xr.open_mfdataset(files[:i], decode_times=False)
+        except ValueError as e:
+            if "monotonic global indexes along dimension S" in str(e):
+                return files[:i-1], files[i-1:]
+    return files, []
+
 # ---------------------------------------------------------------------------- #
 for v in variables:
 
@@ -116,7 +141,7 @@ for v in variables:
     compute = CheckFiles(out_dir, files)
 
     # ------------------------------------------------------------------------ #
-    if v == 'T0995sigma' or v == 'hgt':
+    if v == 'hgt':
         dir_hc = '/pikachu/datos/luciano.andrian/hindcast/'
         dir_rt = '/pikachu/datos/luciano.andrian/real_time/'
     else:
@@ -134,12 +159,30 @@ for v in variables:
         files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                                 dir=dir_hc, All=True)
         files = sorted(files, key=lambda x: x.split()[0])
-        data = xr.open_mfdataset(files, decode_times=False)
-        data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-        data = data.sel(L=[0.5, 1.5, 2.5, 3.5])  # Solo leads 0 1 2 3
-        data['L'] = [0, 1, 2, 3]
-        data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
-        data = data.sel(lat=slice(-70, 20), lon=slice(275, 331))
+        files = [x for x in files if all(
+            year not in x for year in
+            ['_2021', '_2022', '_2023', '_2024', '_2025'])]
+
+        # Open files --------------------------------------------------------- #
+        try:
+            data = xr.open_mfdataset(files, decode_times=False)
+            data = SetDataCFSv2(data)
+
+        except:
+            print('Error en la monotonia de la dimencion S')
+            print('Usando SplitFilesByMonotonicity...')
+            files0, files1 = SplitFilesByMonotonicity(files)
+
+            data0 = xr.open_mfdataset(files0, decode_times=False)
+            data1 = xr.open_mfdataset(files1, decode_times=False)
+
+            data0 = SetDataCFSv2(data0)
+            data1 = SetDataCFSv2(data1)
+
+            data = xr.concat([data0, data1], dim='time')
+
+        print('Open files done')
+        # -------------------------------------------------------------------- #
 
         # media movil de 3 meses para separar en estaciones
         hindcast = data.rolling(time=3, center=True).mean()
@@ -169,7 +212,7 @@ for v in variables:
             # tendencia
             aux = season_1982_1998.mean('r').polyfit(dim='time', deg=1)
             aux_trend = xr.polyval(season_1982_1998['time'],
-                                   aux.prec_polyfit_coefficients)
+                                   aux[list(aux.data_vars)[0]])
 
             if l == 0:
                 season_1982_1998_detrened = season_1982_1998 - aux_trend
@@ -186,7 +229,7 @@ for v in variables:
             # tendencia
             aux = season_1999_2011.mean('r').polyfit(dim='time', deg=1)
             aux_trend = xr.polyval(season_1999_2011['time'],
-                                   aux.prec_polyfit_coefficients)
+                                   aux[list(aux.data_vars)[0]])
 
             if l == 0:
                 season_1999_2011_detrend = season_1999_2011 - aux_trend
@@ -205,7 +248,7 @@ for v in variables:
             son_hindcast_detrend = xr.concat([season_1982_1998_detrened,
                                               season_1999_2011_detrend],
                                              dim='time')
-            # son_hindcast_detrend_mean = son_hindcast_detrend.mean(['r', 'time'])
+            #son_hindcast_detrend_mean = son_hindcast_detrend.mean(['r', 'time'])
 
             # Save
             son_hindcast_detrend.to_netcdf(
@@ -216,23 +259,30 @@ for v in variables:
         files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                                 dir=dir_rt, All=True)
         files = sorted(files, key=lambda x: x.split()[0])
-        # files = [x for x in files if '_2022' not in x and '_2021' not in x]
-        #
-        # # para evitar: ValueError:
-        # # Resulting object does not have monotonic global indexes along dimension
-        # # en xr.open_mfdataset
-        # files0 = files[0:252]
-        # files1 = files[253:len(files)]
+        files = [x for x in files if all(
+            year not in x for year in
+            ['_2021', '_2022', '_2023', '_2024', '_2025'])]
 
-        data = xr.open_mfdataset(files,
-                                 decode_times=False)
-        data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-        data = data.sel(L=[0.5, 1.5, 2.5, 3.5])  # Solo leads 0 1 2 3
-        data['L'] = [0, 1, 2, 3]
-        data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
-        data = data.sel(lat=slice(-70, 20))
-        data = data.sel(lon=slice(275, 331))
+        # Open files --------------------------------------------------------- #
+        try:
+            data = xr.open_mfdataset(files, decode_times=False)
+            data = SetDataCFSv2(data)
 
+        except:
+            print('Error en la monotonia de la dimencion S')
+            print('Usando SplitFilesByMonotonicity...')
+            files0, files1 = SplitFilesByMonotonicity(files)
+
+            data0 = xr.open_mfdataset(files0, decode_times=False)
+            data1 = xr.open_mfdataset(files1, decode_times=False)
+
+            data0 = SetDataCFSv2(data0)
+            data1 = SetDataCFSv2(data1)
+
+            data = xr.concat([data0, data1], dim='time')
+
+        print('Open files done')
+        # -------------------------------------------------------------------- #
         # media movil de 3 meses para separar en estaciones
         real_time = data.rolling(time=3, center=True).mean()
         real_time = real_time.load()
@@ -261,7 +311,7 @@ for v in variables:
             # Detrend
             aux = season_anom.mean('r').polyfit(dim='time', deg=1)
             aux_trend = xr.polyval(season_anom['time'],
-                                   aux.prec_polyfit_coefficients)
+                                   aux[list(aux.data_vars)[0]])
 
             if l == 0:
                 son_realtime_detrend = season_anom - aux_trend
@@ -324,41 +374,80 @@ for v in variables:
 
         fix = 30
     elif v=='tref' or v=='T0':
-        fix = 1
-        pass
+
+        print('Tcru...')
+        data_dir_pp_clim = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
+                            'data_no_detrend/')
+        data = xr.open_dataset(data_dir_pp_clim + 't_cru0.25.nc')
+        data = ChangeLons(data)
+        data = data.sel(lon=slice(275, 331), lat=slice(-70, 20),
+                        time=data.time.dt.year.isin(range(1982, 2020)))
+        data = data.interp(lat=hindcast_norm.lat.values,
+                           lon=hindcast_norm.lon.values)
+        data = data.sel(time=data.time.dt.month.isin(10))  # son
+        data = data.drop('stn')
+        data = data.rename({'tmp': 'tref'})
+        data_clim = data.mean('time')
+        del data
+
+        # sin tendencia
+        data_dir_pp = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
+                       'data_obs_d_w_c/')
+        data = xr.open_dataset(data_dir_pp + 'tcru_w_c_d_0.25_SON.nc')
+        data = data.sel(lon=slice(275, 331), lat=slice(-70, 20),
+                        time=data.time.dt.year.isin(range(1982, 2020)))
+        data = data.interp(lat=hindcast_norm.lat.values,
+                           lon=hindcast_norm.lon.values)
+        data_anom = data.rename({'var': 'tref'})
+
+        del data
 
     else:
         fix = 1
         pass
 
-    aux_hind = son_hindcast_detrend + hindcast_norm
-    aux_real = son_realtime_detrend + real_time_norm
-    cfsv2_norm = xr.concat([aux_hind, aux_real], dim='time')
+    # aux_hind = son_hindcast_detrend + hindcast_norm
+    # aux_real = son_realtime_detrend + real_time_norm
+    # cfsv2_norm = xr.concat([aux_hind, aux_real], dim='time')
 
     aux_hind_no_norm = son_hindcast_detrend + hindcast_no_norm
     aux_real_no_norm = son_realtime_detrend + real_time_no_norm
-    cfsv2_no_norm = xr.concat([aux_hind_no_norm,
-                               aux_real_no_norm], dim='time') * fix
+    if v == 'prec':
+        cfsv2_no_norm = xr.concat([aux_hind_no_norm,
+                                   aux_real_no_norm], dim='time') * fix
+    elif v == 'tref':
+        cfsv2_no_norm = xr.concat([aux_hind_no_norm,
+                                   aux_real_no_norm], dim='time') - 273
 
     variable_obs = data_anom + data_clim
-    variable_obs_norm = variable_obs/variable_obs.std('time')
+    # variable_obs_norm = variable_obs/variable_obs.std('time')
 
-    dif_norm = cfsv2_norm.mean(['time', 'r']) - variable_obs_norm.mean('time')
-    dif_norm = Weights(dif_norm)
+    # dif_norm = cfsv2_norm.mean(['time', 'r']) - variable_obs_norm.mean('time')
+    # dif_norm = Weights(dif_norm)
 
     dif_no_norm = cfsv2_no_norm.mean(['time', 'r']) - variable_obs.mean('time')
     dif_no_norm = Weights(dif_no_norm)
 
     # test
-    name_var = list(variable_obs_norm.data_vars)[0]
+    name_var = list(variable_obs.data_vars)[0]
     pvalue = []
     for m in [7, 8, 9, 10]:
         cfsv2_monthly_mean = cfsv2_no_norm.sel(
-            time=cfsv2_no_norm.time.dt.month.isin(m)).mean('r').prec
-        pp_prec = variable_obs_norm[name_var]  # .isel(lat=slice(None, None, -1)).prec
+            time=cfsv2_no_norm.time.dt.month.isin(m)).mean('r')[name_var]
+        data_var = variable_obs[name_var]
+
         # test
         pvalue.append(
-            ttest_ind(cfsv2_monthly_mean, pp_prec, equal_var=False)[1])
+            ttest_ind(cfsv2_monthly_mean, data_var, equal_var=False)[1])
 
     # promedio de pvalue por leadtime
     pvalue = sum(pvalue) / len(pvalue)
+
+    # Save proc
+    dif_no_norm.to_netcdf(f'{out_dir_proc}{v}_dif_clim_no-norm.nc')
+    xr.DataArray(pvalue).to_netcdf(f'{out_dir_proc}{v}_pvalue_clim_no-norm.nc')
+
+print('# --------------------------------------------------------------------#')
+print('# --------------------------------------------------------------------#')
+print('done')
+print('# --------------------------------------------------------------------#')

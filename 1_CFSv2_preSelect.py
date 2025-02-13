@@ -78,6 +78,26 @@ def Anom_SeasonRealTime(data_realtime, season_clim_1999_2011,
 
     return season_anom_f
 
+def SetDataCFSv2(data):
+    data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
+    data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24),
+                    lon=slice(275, 331), lat=slice(-70, 20))
+    data['L'] = [0, 1, 2, 3]
+    data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
+
+    return data
+
+def SplitFilesByMonotonicity(files):
+    """ Divide la lista de archivos en segmentos donde el índice S
+    sea monotónico """
+    for i in range(1, len(files)):
+        try:
+            # Intentar abrir los archivos hasta el índice i
+            xr.open_mfdataset(files[:i], decode_times=False)
+        except ValueError as e:
+            if "monotonic global indexes along dimension S" in str(e):
+                return files[:i-1], files[i-1:]
+    return files, []
 # ---------------------------------------------------------------------------- #
 for v in variables:
     print(f"{v} ------------------------------------------------------------ #")
@@ -96,20 +116,30 @@ for v in variables:
     files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                             dir=dir_hc, All=True)
     files = sorted(files, key=lambda x: x.split()[0])
+    files = [x for x in files if all(
+        year not in x for year in
+        ['_2021', '_2022', '_2023', '_2024', '_2025'])]
 
-    # abriendo todos los archivos
-    # xr no entiende la codificacion de Leads, r y las fechas
-    data = xr.open_mfdataset(files, decode_times=False)
-    data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-    data = data.sel(L=[0.5, 1.5, 2.5, 3.5])  # Solo leads 0 1 2 3
-    data['L'] = [0, 1, 2, 3]
-    data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
-    data = data.sel(lon=slice(275, 330))
-    if v == 'T0995sigma':
-        data = data.sel(lat=slice(15, -60))
-    else:
-        data = data.sel(lat=slice(-60, 15))
-    data = data.sel(r=slice(1, 24))
+    # Open files --------------------------------------------------------- #
+    try:
+        data = xr.open_mfdataset(files, decode_times=False)
+        data = SetDataCFSv2(data)
+
+    except:
+        print('Error en la monotonia de la dimencion S')
+        print('Usando SplitFilesByMonotonicity...')
+        files0, files1 = SplitFilesByMonotonicity(files)
+
+        data0 = xr.open_mfdataset(files0, decode_times=False)
+        data1 = xr.open_mfdataset(files1, decode_times=False)
+
+        data0 = SetDataCFSv2(data0)
+        data1 = SetDataCFSv2(data1)
+
+        data = xr.concat([data0, data1], dim='time')
+
+    print('Open files done')
+    # -------------------------------------------------------------------- #
 
     # media movil de 3 meses para separar en estaciones
     data = data.rolling(time=3, center=True).mean()
@@ -137,58 +167,31 @@ for v in variables:
     files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                             dir=dir_rt, All=True)
     files = sorted(files, key=lambda x: x.split()[0])
-    files = [x for x in files if "_2022" not in x and '_2021' not in x]
 
-    if v == 'tref':
-        # para evitar: ValueError:
-        # Resulting object does not have monotonic global indexes along
-        # dimension
-        # en xr.open_mfdataset
-        files0 = files[0:144]
-        files1 = files[145:len(files)]
+    files = [x for x in files if all(
+        year not in x for year in
+        ['_2021', '_2022', '_2023', '_2024', '_2025'])]
 
-        data0 = xr.open_mfdataset(files0, decode_times=False).sel(
-            L=[0.5, 1.5, 2.5, 3.5], M=slice(1, 24), X=slice(275, 331),
-            Y=slice(-70, 20))
-        data1 = xr.open_mfdataset(files1, decode_times=False).sel(
-            L=[0.5, 1.5, 2.5, 3.5], M=slice(1, 24), X=slice(275, 331),
-            Y=slice(-70, 20))
+    # Open files --------------------------------------------------------- #
+    try:
+        data = xr.open_mfdataset(files, decode_times=False)
+        data = SetDataCFSv2(data)
 
-        data0 = data0.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-        data0['L'] = [0, 1, 2, 3]
-        data0 = xr.decode_cf(fix_calendar(data0))  # corrigiendo fechas
-        data0 = data0.sel(time=data0.time.dt.year.isin(2011))
-        data0 = data0.sel(r=slice(1, 24))
+    except:
+        print('Error en la monotonia de la dimencion S')
+        print('Usando SplitFilesByMonotonicity...')
+        files0, files1 = SplitFilesByMonotonicity(files)
 
-        data1 = data1.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-        data1['L'] = [0, 1, 2, 3]
-        data1 = xr.decode_cf(fix_calendar(data1))  # corrigiendo fechas
-        data1 = data1.sel(
-            time=data1.time.dt.year.isin(np.linspace(2012, 2020, 9)))
-        data1 = data1.sel(r=slice(1, 24))
+        data0 = xr.open_mfdataset(files0, decode_times=False)
+        data1 = xr.open_mfdataset(files1, decode_times=False)
+
+        data0 = SetDataCFSv2(data0)
+        data1 = SetDataCFSv2(data1)
 
         data = xr.concat([data0, data1], dim='time')
-    else:
-        # xr no entiende la codificacion de Leads, r y las fechas
-        data = xr.open_mfdataset(files, decode_times=False)
-        data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-        data = data.sel(L=[0.5, 1.5, 2.5, 3.5])  # Solo leads 0 1 2 3
-        data['L'] = [0, 1, 2, 3]
-        data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
-        data = data.sel(
-            time=data.time.dt.year.isin(np.linspace(2011, 2020, 10)))
-        data = data.sel(lon=slice(275, 330))
-        if v == 'T0995sigma':
-            data = data.sel(lat=slice(15, -60))
-        else:
-            data = data.sel(lat=slice(-60, 15))
-        data = data.sel(r=slice(1, 24))
 
-    # data = xr.open_mfdataset(files, decode_times=False).sel(
-    #     L=[0.5, 1.5, 2.5, 3.5], M=slice(1,24), Y=slice(-70, 20))
-    # data['L'] = [0,1,2,3]
-    # data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-    # data = xr.decode_cf(fix_calendar(data))
+    print('Open files done')
+    # -------------------------------------------------------------------- #
 
     data = data.rolling(time=3, center=True).mean()
 
