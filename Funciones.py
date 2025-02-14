@@ -2673,6 +2673,14 @@ def moving_average_2d(data, window):
     # (boundary='symm').
     return convolve2d(data, window, mode='same', boundary='symm')
 
+def RenameDataset(new_name, *args):
+    dataset = []
+    for arg in args:
+        arg2 = arg.rename({list(arg.data_vars)[0]:new_name})
+
+        dataset.append(arg2)
+
+    return tuple(dataset)
 ################################################################################
 # PlotFinal
 """
@@ -2706,13 +2714,24 @@ def SetDataToPlotFinal(*args):
     data_arrays = []
     for arg in args:
         if not isinstance(arg, xr.DataArray):
-            arg = xr.DataArray(arg, dims=['lat', 'lon'])
+            try:
+                arg = xr.DataArray(arg, dims=['lat', 'lon'])
+            except:
+                arg = arg.to_array()
+                if 1 in arg.shape:
+                    arg = arg.squeeze()
+                arg = xr.DataArray(arg, dims=['lat', 'lon'])
+        else:
+            if 1 in arg.shape:
+                arg = arg.squeeze()
+
         data_arrays.append(arg)
 
     data = xr.concat(data_arrays, dim='plots')
     data = data.assign_coords(plots=range(data.shape[0]))
 
     return data
+
 
 def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
               data_ctn=None, levels_ctn=None, color_ctn=None,
@@ -2747,6 +2766,9 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
     elif map.upper() == 'HS_EX':
         extent = [0, 359, -65, -20]
         high = 2
+    elif map.upper() == 'SA':
+        extent = [275, 330, -60, 20]
+        high = high
     else:
         print(f"Mapa {map} no seteado")
         return
