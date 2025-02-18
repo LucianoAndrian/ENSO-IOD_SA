@@ -9,9 +9,9 @@ import numpy as np
 from Funciones import SelectNMMEFiles
 # ---------------------------------------------------------------------------- #
 out_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
-save_nc = False
-variables = ['hgt', 'tref', 'prec', 'T0995sigma']
-
+save_nc = True
+variables = ['hgt', 'tref', 'prec']#, 'T0995sigma']
+variables = ['tref', 'prec']
 # Funciones ------------------------------------------------------------------ #
 def fix_calendar(ds, timevar='time'):
     """
@@ -77,6 +77,71 @@ def Anom_SeasonRealTime(data_realtime, season_clim_1999_2011,
             season_anom_f = xr.concat([season_anom_f, season_anom], dim='time')
 
     return season_anom_f
+
+def Detrend_Seasons(season_anom_1982_1998, season_anom_1999_2011,
+                    main_month_season):
+
+    for l in [0,1,2,3]:
+        #1982-1998
+        aux_season_anom_1982_1998 = season_anom_1982_1998.sel(
+            time=season_anom_1982_1998.time.dt.month.isin(main_month_season-l),
+        L=l)
+
+        aux = aux_season_anom_1982_1998.mean('r').polyfit(dim='time', deg=1)
+        aux_trend = xr.polyval(
+            aux_season_anom_1982_1998['time'], aux[list(aux.data_vars)[0]])
+
+        if l == 0:
+            season_anom_1982_1998_detrened = \
+                aux_season_anom_1982_1998 - aux_trend
+        else:
+            aux_detrend = aux_season_anom_1982_1998 - aux_trend
+            season_anom_1982_1998_detrened = \
+                xr.concat([season_anom_1982_1998_detrened, aux_detrend],
+                          dim='time')
+
+    # 1999-2011
+        aux_season_anom_1999_2011 = season_anom_1999_2011.sel(
+            time=season_anom_1999_2011.time.dt.month.isin(main_month_season - l),
+        L=l)
+
+        aux = aux_season_anom_1999_2011.mean('r').polyfit(dim='time', deg=1)
+        aux_trend = xr.polyval(
+            aux_season_anom_1999_2011['time'], aux[list(aux.data_vars)[0]])
+        if l==0:
+            season_anom_1999_2011_detrend = \
+                aux_season_anom_1999_2011 - aux_trend
+        else:
+            aux_detrend = aux_season_anom_1999_2011 - aux_trend
+            season_anom_1999_2011_detrend = xr.concat(
+                [season_anom_1999_2011_detrend, aux_detrend], dim='time')
+
+    return season_anom_1982_1998_detrened, season_anom_1999_2011_detrend
+
+def Anom_Detrend_SeasonRealTime(data_realtime, season_clim_1999_2011,
+                                main_month_season):
+
+    for l in [0,1,2,3]:
+        season_data = data_realtime.sel(
+            time=data_realtime.time.dt.month.isin(main_month_season-l), L=l)
+        aux_season_clim_1999_2011 = season_clim_1999_2011.sel(L=l)
+
+        #Anomalia
+        season_anom = season_data - aux_season_clim_1999_2011
+
+        #Detrend
+        aux = season_anom.mean('r').polyfit(dim='time', deg=1)
+        aux_trend = xr.polyval(
+            season_anom['time'], aux[list(aux.data_vars)[0]])
+
+        if l==0:
+            season_anom_detrend = season_anom - aux_trend
+        else:
+            aux_detrend = season_anom - aux_trend
+            season_anom_detrend = xr.concat(
+                [season_anom_detrend, aux_detrend], dim='time')
+
+    return season_anom_detrend
 
 def SetDataCFSv2(data):
     data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
@@ -155,9 +220,16 @@ for v in variables:
     son_clim_82_98, son_clim_99_11, son_anom_82_98, son_anom_99_11 = \
         TwoClim_Anom_Seasons(data_1982_1998, data_1999_2011, 10)
 
+    son_anom_82_98_detrend, son_anom_99_11_detrend = \
+        Detrend_Seasons(data_1982_1998, data_1999_2011, 10)
+
     son_hindcast = xr.concat([son_anom_82_98, son_anom_99_11], dim='time')
 
+    son_hindcast_detrend = xr.concat(
+        [son_anom_82_98_detrend, son_anom_99_11_detrend], dim='time')
+
     son_hindcast.to_netcdf(f"{out_dir}{v}_aux_hindcast_no_detrend_son.nc")
+    son_hindcast_detrend.to_netcdf(f"{out_dir}{v}_aux_hindcast_detrend_son.nc")
     son_clim_99_11.to_netcdf(f"{out_dir}{v}_aux_son_clim_99_11.nc")
     del son_hindcast, son_clim_82_98, son_clim_99_11
 
@@ -191,7 +263,7 @@ for v in variables:
         data = xr.concat([data0, data1], dim='time')
 
     print('Open files done')
-    # -------------------------------------------------------------------- #
+    # ------------------------------------------------------------------------ #
 
     data = data.rolling(time=3, center=True).mean()
 
@@ -200,19 +272,30 @@ for v in variables:
     son_clim_99_11 = xr.open_dataset(f"{out_dir}{v}_aux_son_clim_99_11.nc")
     son_hindcast_no_detrend = \
         xr.open_dataset(f"{out_dir}{v}_aux_hindcast_no_detrend_son.nc")
+    son_hindcast_detrend = \
+        xr.open_dataset(f"{out_dir}{v}_aux_hindcast_detrend_son.nc")
 
     son_realtime_no_detrend = Anom_SeasonRealTime(data, son_clim_99_11, 10)
     son_realtime_no_detrend.load()
 
+    son_realtime_detrend = Anom_Detrend_SeasonRealTime(
+        data, son_clim_99_11, 10)
+    son_realtime_detrend.load()
+
     print('concat')
     son_f = xr.concat(
         [son_hindcast_no_detrend, son_realtime_no_detrend], dim='time')
+    son_f_detrend = xr.concat(
+        [son_hindcast_detrend, son_realtime_detrend], dim='time')
 
     # save ---------------------------------------------------------------------
     if save_nc:
         son_f.to_netcdf(f"{out_dir}{v}_son_no_detrend.nc")
+        son_f_detrend.to_netcdf(f"{out_dir}{v}_son_detrend.nc")
 
-    del son_realtime_no_detrend, son_hindcast_no_detrend, data, son_f
+    del son_realtime_no_detrend, son_hindcast_no_detrend, data, son_f, \
+        son_realtime_detrend, son_hindcast_detrend, son_f_detrend
+
 print('# --------------------------------------------------------------------#')
 print('# --------------------------------------------------------------------#')
 print('done')

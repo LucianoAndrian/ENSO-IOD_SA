@@ -101,51 +101,51 @@ else:
 
 #cases = ['dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 # TSigma #######################################################################
-if len(seasons)>1:
-    def SelectEventsTSigma(c):
-        for s in seasons:
-            try:
-                aux_cases = \
-                    xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
-                    .rename({'__xarray_dataarray_variable__': 'index'})
-            except:
-                aux_cases = \
-                    xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
-                    .rename({'TMP': 'index'})
-
-            data_tsigma_s =\
-                xr.open_dataset(data_dir + 'tsigma_' + s.lower() + '.nc')
-            case_events = SelectVariables(aux_cases, data_tsigma_s)
-
-            case_events.to_netcdf(out_dir + 'tsigma_' + c + '_' + s + '_05.nc')
-
-    pool = ThreadPool(4)  # uno por season
-    pool.map_async(SelectEventsTSigma, [c for c in cases])
-
-else:
-    print('one season')
-    def SelectEventsTSigma(c):
-        s = seasons[0]
-        try:
-            aux_cases =\
-                xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
-                    .rename({'__xarray_dataarray_variable__': 'index'})
-        except:
-            aux_cases = \
-                xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
-                    .rename({'sst': 'index'})
-
-        data_tsigma_s = \
-            xr.open_dataset(data_dir + 'T0995sigma_' + s.lower() +
-                            '_no_detrend.nc')
-
-        case_events = SelectVariables(aux_cases, data_tsigma_s)
-        case_events.to_netcdf(out_dir + 'tsigma_' + c + '_' + s +
-                              '_no_detrend_05.nc')
-
-    processes = [Process(target=SelectEventsTSigma, args=(c,)) for c in cases]
-    for process in processes:
-        process.start()
+# if len(seasons)>1:
+#     def SelectEventsTSigma(c):
+#         for s in seasons:
+#             try:
+#                 aux_cases = \
+#                     xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
+#                     .rename({'__xarray_dataarray_variable__': 'index'})
+#             except:
+#                 aux_cases = \
+#                     xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
+#                     .rename({'TMP': 'index'})
+#
+#             data_tsigma_s =\
+#                 xr.open_dataset(data_dir + 'tsigma_' + s.lower() + '.nc')
+#             case_events = SelectVariables(aux_cases, data_tsigma_s)
+#
+#             case_events.to_netcdf(out_dir + 'tsigma_' + c + '_' + s + '_05.nc')
+#
+#     pool = ThreadPool(4)  # uno por season
+#     pool.map_async(SelectEventsTSigma, [c for c in cases])
+#
+# else:
+#     print('one season')
+#     def SelectEventsTSigma(c):
+#         s = seasons[0]
+#         try:
+#             aux_cases =\
+#                 xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+#                     .rename({'__xarray_dataarray_variable__': 'index'})
+#         except:
+#             aux_cases = \
+#                 xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+#                     .rename({'sst': 'index'})
+#
+#         data_tsigma_s = \
+#             xr.open_dataset(data_dir + 'T0995sigma_' + s.lower() +
+#                             '_no_detrend.nc')
+#
+#         case_events = SelectVariables(aux_cases, data_tsigma_s)
+#         case_events.to_netcdf(out_dir + 'tsigma_' + c + '_' + s +
+#                               '_no_detrend_05.nc')
+#
+#     processes = [Process(target=SelectEventsTSigma, args=(c,)) for c in cases]
+#     for process in processes:
+#         process.start()
 
 # Tref #########################################################################
 if len(seasons)>1:
@@ -182,12 +182,19 @@ else:
                 xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
                     .rename({'sst': 'index'})
 
-        data_tsigma_s = \
+        data_tref_s = \
             xr.open_dataset(data_dir + 'tref_' + s.lower() + '_no_detrend.nc')
 
-        case_events = SelectVariables(aux_cases, data_tsigma_s)
+        case_events = SelectVariables(aux_cases, data_tref_s)
         case_events.to_netcdf(out_dir + 'tref_' + c + '_' + s +
                               '_no_detrend_05.nc')
+
+        data_tref_s = \
+            xr.open_dataset(data_dir + 'tref_' + s.lower() + '_detrend.nc')
+
+        case_events = SelectVariables(aux_cases, data_tref_s)
+        case_events.to_netcdf(out_dir + 'tref_' + c + '_' + s +
+                              '_detrend_05.nc')
 
     processes = [Process(target=SelectEventsTref, args=(c,)) for c in cases]
     for process in processes:
@@ -234,6 +241,13 @@ else:
         case_events = SelectVariables(aux_cases, data_prec_s)
         case_events.to_netcdf(out_dir + 'prec_' + c + '_' + s +
                               '_no_detrend_05.nc')
+
+        data_prec_s = \
+            xr.open_dataset(data_dir + 'prec_' + s.lower() + '_detrend.nc')
+
+        case_events = SelectVariables(aux_cases, data_prec_s)
+        case_events.to_netcdf(out_dir + 'prec_' + c + '_' + s +
+                              '_detrend_05.nc')
 
     processes = [Process(target=SelectEventsPrec, args=(c,)) for c in cases]
     for process in processes:
