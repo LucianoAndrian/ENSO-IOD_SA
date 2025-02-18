@@ -2712,6 +2712,7 @@ Otros seteos:
 
 def SetDataToPlotFinal(*args):
     data_arrays = []
+    first = True
     for arg in args:
         if not isinstance(arg, xr.DataArray):
             try:
@@ -2725,13 +2726,18 @@ def SetDataToPlotFinal(*args):
             if 1 in arg.shape:
                 arg = arg.squeeze()
 
+        if first is False:
+            if data_arrays[0].lon.values[-1] != arg.lon.values[-1]:
+                arg = arg.interp(lon = data_arrays[0].lon.values,
+                                 lat = data_arrays[0].lat.values)
+
         data_arrays.append(arg)
+        first = False
 
     data = xr.concat(data_arrays, dim='plots')
     data = data.assign_coords(plots=range(data.shape[0]))
 
     return data
-
 
 def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
               data_ctn=None, levels_ctn=None, color_ctn=None,
@@ -2739,7 +2745,8 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
               data_waf=None, wafx=None, wafy=None, waf_scale=None,
               waf_step=None, waf_label=None, sig_points=None, hatches=None,
               num_cols=None, high=2, width = 7.08661, step=2, cbar_pos = 'H',
-              num_cases=False, num_cases_data=None):
+              num_cases=False, num_cases_data=None, pdf=False, ocean_mask=False,
+              data_ctn_no_ocean_mask=False, data_ctn2_no_ocean_mask=False):
 
     import matplotlib.gridspec as gridspec
     # cantidad de filas necesarias
@@ -2780,15 +2787,9 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
 
     import string
 
-    for i, (ax, plot) in enumerate(zip(axes.flatten(), plots)):
-
-        if num_cases:
-            ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]}), "
-                                   f"$N={num_cases_data[plot]}$",
-                    transform=ax.transAxes, size=6)
-        else:
-            ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]})",
-                    transform=ax.transAxes, size=6)
+    i = 0
+    for ax, plot in zip(axes.flatten(), plots):
+        no_plot = False
 
         if data_ctn is not None:
             if levels_ctn is None:
@@ -2801,14 +2802,22 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             except:
                 pass
             aux_ctn = data_ctn.sel(plots=plot)
-            try:
-                aux_ctn_var = aux_ctn['var'].values
-            except:
-                aux_ctn_var = aux_ctn.values
-            ax.contour(data_ctn.lon.values[::step], data_ctn.lat.values[::step],
-                       aux_ctn_var[::step, ::step], linewidths=0.4,
-                       levels=levels_ctn, transform=crs_latlon,
-                       colors=color_ctn)
+            if aux_ctn.mean().values != 0:
+
+                if ocean_mask is True and data_ctn_no_ocean_mask is False:
+                    mask_ocean = MakeMask(aux_ctn)
+                    aux_ctn = aux_ctn * mask_ocean.mask
+
+                try:
+                    aux_ctn_var = aux_ctn['var'].values
+                except:
+                    aux_ctn_var = aux_ctn.values
+                ax.contour(data_ctn.lon.values[::step],
+                           data_ctn.lat.values[::step],
+                           aux_ctn_var[::step, ::step], linewidths=0.4,
+                           levels=levels_ctn, transform=crs_latlon,
+                           colors=color_ctn)
+
 
         if data_ctn2 is not None:
             if levels_ctn2 is None:
@@ -2822,29 +2831,49 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             except:
                 pass
             aux_ctn = data_ctn2.sel(plots=plot)
-            try:
-                aux_ctn_var = aux_ctn['var'].values
-            except:
-                aux_ctn_var = aux_ctn.values
-            ax.contour(data_ctn2.lon.values[::step],
-                       data_ctn2.lat.values[::step],
-                       aux_ctn_var[::step, ::step], linewidths=0.5,
-                       levels=levels_ctn2, transform=crs_latlon,
-                       colors=color_ctn2)
+            if aux_ctn.mean().values != 0:
+
+                if ocean_mask is True and data_ctn2_no_ocean_mask is False:
+                    mask_ocean = MakeMask(aux_ctn)
+                    aux_ctn = aux_ctn * mask_ocean.mask
+
+                try:
+                    aux_ctn_var = aux_ctn['var'].values
+                except:
+                    aux_ctn_var = aux_ctn.values
+                ax.contour(data_ctn2.lon.values[::step],
+                           data_ctn2.lat.values[::step],
+                           aux_ctn_var[::step, ::step], linewidths=0.5,
+                           levels=levels_ctn2, transform=crs_latlon,
+                           colors=color_ctn2)
 
         aux = data.sel(plots=plot)
-        try:
-            aux_var = aux['var'].values
-        except:
-            aux_var = aux.values
-        im = ax.contourf(aux.lon.values[::step], aux.lat.values[::step],
-                         aux_var[::step,::step],
-                         levels=levels,
-                         transform=crs_latlon, cmap=cmap, extend='both')
+        if aux.mean().values != 0:
+
+            if ocean_mask is True:
+                mask_ocean = MakeMask(aux)
+                aux = aux * mask_ocean.mask
+
+            try:
+                aux_var = aux['var'].values
+            except:
+                aux_var = aux.values
+            im = ax.contourf(aux.lon.values[::step], aux.lat.values[::step],
+                             aux_var[::step, ::step],
+                             levels=levels,
+                             transform=crs_latlon, cmap=cmap, extend='both')
+        else:
+            ax.axis('off')
+            no_plot=True
 
         if data_waf is not None:
             wafx_aux = wafx.sel(plots=plot)
             wafy_aux = wafy.sel(plots=plot)
+
+            if ocean_mask is True:
+                mask_ocean = MakeMask(wafx_aux)
+                wafx_aux = wafx_aux * mask_ocean.mask
+                wafy_aux = wafy_aux * mask_ocean.mask
 
             from numpy import ma
             Q60 = np.nanpercentile(np.sqrt(np.add(np.power(wafx_aux, 2),
@@ -2882,56 +2911,79 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
 
         if sig_points is not None:
             aux_sig_points = sig_points.sel(plots=plot)
-            #hatches = '....'
-            colors_l = ['k', 'k']
-            comp_sig_var = aux_sig_points['var']
-            cs = ax.contourf(aux_sig_points.lon[::step],
-                             aux_sig_points.lat[::step],
-                             comp_sig_var[::step,::step], transform=crs_latlon,
-                             colors='none', hatches=[hatches, hatches],
-                             extend='lower')
+            if aux_sig_points.mean().values != 0:
 
-            for i, collection in enumerate(cs.collections):
-                collection.set_edgecolor(colors_l[i % len(colors_l)])
+                if ocean_mask is True:
+                    mask_ocean = MakeMask(aux_sig_points)
+                    aux_sig_points = aux_sig_points * mask_ocean.mask
 
-            for collection in cs.collections:
-                collection.set_linewidth(0.)
+                # hatches = '....'
+                colors_l = ['k', 'k']
+                try:
+                    comp_sig_var = aux_sig_points['var']
+                except:
+                    comp_sig_var = aux_sig_points.values
+                cs = ax.contourf(aux_sig_points.lon[::step],
+                                 aux_sig_points.lat[::step],
+                                 comp_sig_var[::step, ::step],
+                                 transform=crs_latlon,
+                                 colors='none',
+                                 hatches=[hatches, hatches],
+                                 extend='lower')
 
-        ax.add_feature(cartopy.feature.LAND, facecolor='white', linewidth=0.5)
+                for i2, collection in enumerate(cs.collections):
+                    collection.set_edgecolor(colors_l[i2 % len(colors_l)])
 
-        #ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
-        ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
-                      resolution='110m')
-        gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
-                          zorder=20)
-        gl.ylocator = plt.MultipleLocator(20)
-        ax.set_xticks(np.arange(0, 360, 60), crs=crs_latlon)
-        ax.set_yticks(np.arange(-80, 20, 20), crs=crs_latlon)
-        ax.tick_params(width=0.5, pad=1)
-        lon_formatter = LongitudeFormatter(zero_direction_label=True)
-        lat_formatter = LatitudeFormatter()
-        ax.xaxis.set_major_formatter(lon_formatter)
-        ax.yaxis.set_major_formatter(lat_formatter)
-        ax.tick_params(labelsize=4)
-        ax.set_extent(extent, crs=crs_latlon)
+                for collection in cs.collections:
+                    collection.set_linewidth(0.)
 
-        ax.set_aspect('equal')
-        ax.set_title(titles[plot], fontsize=6, pad=2)
 
-        for spine in ax.spines.values():
-            spine.set_linewidth(0.5)
+        if no_plot is False:
+            if num_cases:
+                ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]}), "
+                                       f"$N={num_cases_data[plot]}$",
+                        transform=ax.transAxes, size=6)
+            else:
+                ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]})",
+                        transform=ax.transAxes, size=6)
+            i = i + 1
 
-    # Eliminar los lugares en blanco que existan
-    # for i in range(num_plots, num_rows * num_cols):
-    #     fig.delaxes(axes.flatten()[i])
+            ax.add_feature(cartopy.feature.LAND, facecolor='white',
+                           linewidth=0.5)
+            # ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
+            ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
+                          resolution='110m')
+            gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
+                              zorder=20)
+            gl.ylocator = plt.MultipleLocator(20)
+            ax.set_xticks(np.arange(0, 360, 60), crs=crs_latlon)
+            ax.set_yticks(np.arange(-80, 20, 20), crs=crs_latlon)
+            ax.tick_params(width=0.5, pad=1)
+            lon_formatter = LongitudeFormatter(zero_direction_label=True)
+            lat_formatter = LatitudeFormatter()
+            ax.xaxis.set_major_formatter(lon_formatter)
+            ax.yaxis.set_major_formatter(lat_formatter)
+            ax.tick_params(labelsize=4)
+            ax.set_extent(extent, crs=crs_latlon)
+
+            ax.set_aspect('equal')
+            ax.set_title(titles[plot], fontsize=6, pad=2)
+
+            for spine in ax.spines.values():
+                spine.set_linewidth(0.5)
+
+        # Eliminar los lugares en blanco que existan
+        # for i in range(num_plots, num_rows * num_cols):
+        #     fig.delaxes(axes.flatten()[i])
+
 
     #cbar_pos = 'H'
     if cbar_pos.upper() == 'H':
         pos = fig.add_axes([0.235, 0.03, 0.5, 0.02])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
         cb.ax.tick_params(labelsize=5, pad=1)
-        fig.subplots_adjust(bottom=0.1, wspace=0, hspace=0.25, left=0, right=1,
-                            top=1)
+        fig.subplots_adjust(bottom=0.1, wspace=0, hspace=0.25,
+                            left=0, right=1, top=1)
     elif cbar_pos.upper() == 'V':
         import matplotlib.patches as mpatches
         aux_color = cmap.colors[2]
@@ -2945,8 +2997,12 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                             top=1)
 
     if save:
-        plt.savefig(f"{out_dir}{namefig}.pdf", dpi=dpi, bbox_inches='tight')
-        plt.close()
+        if pdf is True:
+            plt.savefig(f"{out_dir}{namefig}.pdf", dpi=dpi, bbox_inches='tight')
+            plt.close()
+        else:
+            plt.savefig(f"{out_dir}{namefig}.png", dpi=dpi, bbox_inches='tight')
+            plt.close()
     else:
         plt.show()
 
@@ -3461,7 +3517,6 @@ def PlotFinal15_16(data, levels, cmap, titles, namefig, save, dpi, out_dir,
         plt.close()
     else:
         plt.show()
-
 
 def PlotFinalFigS3(data, data_ctn, levels, cmap, title0, namefig, save, dpi,
                    out_dir, data2=None, levels2=None, cmap2=None,

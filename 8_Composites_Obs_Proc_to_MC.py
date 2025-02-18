@@ -3,7 +3,8 @@ Composiciones observadas
 """
 # ---------------------------------------------------------------------------- #
 save = False
-out_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/nc_composites_dates/'
+out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
+           'nc_composites_dates_no_ind_sst_anom/')
 # ---------------------------------------------------------------------------- #
 import xarray as xr
 import pandas as pd
