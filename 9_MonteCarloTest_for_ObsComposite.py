@@ -1,8 +1,6 @@
 """
 Test de Monte Carlo para las composiciones de eventos observados
 """
-from testeos import seasons
-
 # ---------------------------------------------------------------------------- #
 save = False
 out_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/nc_quantiles' \
@@ -120,7 +118,7 @@ for v, dir in zip(variables, dirs):
 
     for c_count, c in enumerate(cases):
         print(f'{c}-----------------------------------------------------------')
-        for s in seasons:
+        for s_count, s in enumerate(seasons):
             print(s)
             # si la proxima tenga menos de 10000 permutaciones
             # no se sobreescribirian todas
@@ -134,7 +132,7 @@ for v, dir in zip(variables, dirs):
                     except:
                         print('Error: ' + f)
 
-            mmonth = min_max_months[c_count]
+            mmonth = min_max_months[s_count]
 
             def PermuDatesComposite(n, data=data, mmonth=mmonth):
                 mmin = mmonth[0]
