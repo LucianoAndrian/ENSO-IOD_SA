@@ -1916,7 +1916,8 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
 
     print('1.1 Climatología y case')
     if v != 'hgt':
-        end_nc_file = '_no_detrend_05.nc'
+        end_nc_file = '_detrend_05.nc'
+        #end_nc_file = '_no_detrend_05.nc'
     else:
         end_nc_file = '_05.nc'
 
@@ -1938,7 +1939,7 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         return aux, aux, aux
 
     if v == 'tref' or v == 'prec' or v == 'tsigma':
-        lat = np.arange(-60, 15 + 1)
+        lat = np.arange(-60, 20 + 1)
         lon = np.arange(275, 330 + 1)
     else:
         lat = np.linspace(-80, 20, 101)
@@ -1984,12 +1985,10 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     # y coinciden todos los eventos en fecha, r y L
 
     cases_date_dir = '/pikachu/datos/luciano.andrian/cases_dates/'
-    try:
-        aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
-            .rename({'__xarray_dataarray_variable__': 'index'})
-    except:
-        aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc') \
-            .rename({'sst': 'index'})
+
+    aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')
+    aux_cases = aux_cases.rename({list(aux_cases.data_vars)[0]: 'index'})
+
 
     case_sel_dmi = SelectVariables(aux_cases, data_dates_dmi_or)
     case_sel_dmi = case_sel_dmi.sortby(case_sel_dmi.time.dt.month)

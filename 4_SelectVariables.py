@@ -23,7 +23,8 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'sim_pos', 'sim_neg', #sim misma fase
          'neutros', #neutros
          # todos de cada caso para validación
-         'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg']
+         'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg',
+         'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 
 seasons = ['SON']
 
@@ -56,7 +57,6 @@ else:
         process.start()
 
 # HGT ##########################################################################
-cases = ['dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 if len(seasons)>1:
     def SelectEventsHGT(c):
         for s in seasons:
@@ -148,6 +148,7 @@ else:
 #         process.start()
 
 # Tref #########################################################################
+cases = ['dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 if len(seasons)>1:
     def SelectEventsTref(c):
         for s in seasons:
