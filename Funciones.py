@@ -1898,7 +1898,11 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
             np.tile(np.cos(np.arange(
                 data.lat.min().values, data.lat.max().values+1) * np.pi / 180),
                     (len(data.lon), 1)))
-        data_w = data * weights
+        try:
+            data_w = data * weights
+        except:
+            data_w = data.transpose('time', 'lat', 'lon') * weights
+
         return data_w
 
     # 1. se abren los archivos de los índices (completos y se pesan por su SD)
@@ -1996,16 +2000,57 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     case_sel_dmi_n34 = case_sel_dmi_n34.sortby(case_sel_dmi_n34.time.dt.month)
 
     print('2.1 uniendo var, dmi y n34')
-    data_merged = xr.Dataset(
-        data_vars=dict(
-            var=(['time', 'lat', 'lon'], anom['var'].values),
-            dmi=(['time'], case_sel_dmi.sst.values),
-            n34=(['time'], case_sel_dmi_n34.sst.values),
-        ),
-        coords=dict(
-            time=anom.time.values
+    try:
+        data_merged = xr.Dataset(
+            data_vars=dict(
+                var=(['time', 'lat', 'lon'], anom['var'].values),
+                dmi=(['time'], case_sel_dmi.sst.values),
+                n34=(['time'], case_sel_dmi_n34.sst.values),
+            ),
+            coords=dict(
+                time=anom.time.values
+            )
         )
-    )
+
+    # No deberia suceder pero con tref hay fechas duplicadas en 2011 y los campos
+    # de estas fechas no son iguales. son 4 datos en total.
+    except:
+        print('error de anios, revisando...')
+        times_to_remove = []
+        for t in anom.time.values:
+            lista = anom.sel(time=t).r.values
+            vistos = set()
+
+            try:
+                len(lista)
+                for valor in lista:
+                    if valor in vistos:
+                        print(f'error en anio {t}, será removido')
+                        times_to_remove.append(t)
+                    else:
+                        vistos.add(valor)
+            except:
+                pass
+
+        print(times_to_remove)
+        for t in np.unique(times_to_remove):
+            anom = anom.sel(time=anom.time != t)
+            case_sel_dmi = case_sel_dmi.sel(
+                time=case_sel_dmi.time != t)
+            case_sel_dmi_n34 = case_sel_dmi_n34.sel(
+                time=case_sel_dmi_n34.time != t)
+
+        data_merged = xr.Dataset(
+            data_vars=dict(
+                var=(['time', 'lat', 'lon'], anom['var'].values),
+                dmi=(['time'], case_sel_dmi.sst.values),
+                n34=(['time'], case_sel_dmi_n34.sst.values),
+            ),
+            coords=dict(
+                time=anom.time.values
+            )
+        )
+
 
     bins_aux_dmi = bins_by_cases_dmi[c_count]
     bins_aux_n34 = bins_by_cases_n34[c_count]
@@ -2024,9 +2069,10 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         # loop en las correspondientes al n34 segun case
         for ba_n34 in range(0, len(bins_aux_n34)):
             bin_f = bins_aux.where(
-                SelectBins(bins_aux.n34,
-                           bin_limits[bins_aux_n34[ba_n34]][0]/aux_n34_std.sst.values,
-                           bin_limits[bins_aux_n34[ba_n34]][1]/aux_n34_std.sst.values))
+                SelectBins(
+                    bins_aux.n34,
+                    bin_limits[bins_aux_n34[ba_n34]][0]/aux_n34_std.sst.values,
+                    bin_limits[bins_aux_n34[ba_n34]][1]/aux_n34_std.sst.values))
 
             if snr:
                 spread = bin_f - bin_f.mean(['time'])
@@ -2051,17 +2097,21 @@ def DetrendClim(data, mm, v_name='prec'):
         season_data = data.sel(time=data.time.dt.month.isin(mm - l), L=l)
         aux = season_data.polyfit(dim='time', deg=1)
         if v_name == 'prec':
-            aux_trend = xr.polyval(season_data['time'], aux.prec_polyfit_coefficients[0])  # al rededor de la media
+            aux_trend = xr.polyval(season_data['time'],
+                                   aux.prec_polyfit_coefficients[0])  # al rededor de la media
         elif v_name == 'tref':
-            aux_trend = xr.polyval(season_data['time'], aux.tref_polyfit_coefficients[0])  # al rededor de la media
+            aux_trend = xr.polyval(season_data['time'],
+                                   aux.tref_polyfit_coefficients[0])  # al rededor de la media
         elif v_name == 'hgt':
-            aux_trend = xr.polyval(season_data['time'], aux.hgt_polyfit_coefficients[0])  # al rededor de la media
+            aux_trend = xr.polyval(season_data['time'],
+                                   aux.hgt_polyfit_coefficients[0])  # al rededor de la media
 
         if l == 0:
             season_anom_detrend = season_data - aux_trend
         else:
             aux_detrend = season_data - aux_trend
-            season_anom_detrend = xr.concat([season_anom_detrend, aux_detrend], dim='time')
+            season_anom_detrend = xr.concat([season_anom_detrend,
+                                             aux_detrend], dim='time')
 
     return season_anom_detrend.mean(['r', 'time'])
 
@@ -2811,6 +2861,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                     aux_ctn_var = aux_ctn['var'].values
                 except:
                     aux_ctn_var = aux_ctn.values
+
                 ax.contour(data_ctn.lon.values[::step],
                            data_ctn.lat.values[::step],
                            aux_ctn_var[::step, ::step], linewidths=0.4,
@@ -3231,6 +3282,276 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
         plt.close()
     else:
         plt.show()
+
+def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
+                                   save, dpi, out_dir, data_ctn=None,
+                                   levels_ctn=None, color_ctn=None,
+                                   row_titles=None, col_titles=None,
+                                   clim_plot=None, clim_levels=None,
+                                   clim_cbar=None, high=2, width = 7.08661,
+                                   cbar_pos='H', plot_step=3,
+                                   clim_plot_ctn=None, clim_levels_ctn=None,
+                                   pdf=True,
+                                   ocean_mask=False,
+                                   data_ctn_no_ocean_mask=False
+                                   ):
+    num_cols = 5
+    num_rows = 5
+
+    plots = data.plots.values
+    crs_latlon = ccrs.PlateCarree()
+
+    if map.upper() == 'HS':
+        extent = [0, 359, -80, 20]
+        high = high
+        xticks = np.arange(0, 360, 60)
+        yticks = np.arange(-80, 20, 20)
+    elif map.upper() == 'TR':
+        extent = [45, 270, -20, 20]
+        high = high
+        xticks = np.arange(0, 360, 60)
+        np.arange(-80, 20, 20)
+    elif map.upper() == 'HS_EX':
+        extent = [0, 359, -65, -20]
+        high = high
+        xticks = np.arange(0, 360, 60)
+    elif map.upper() == 'SA':
+        extent = [270, 330, -60, 20]
+        high = high
+        yticks = np.arange(-60, 15+1, 20)
+        xticks = np.arange(275, 330+1, 20)
+    else:
+        print(f"Mapa {map} no seteado")
+        return
+
+    fig, axes = plt.subplots(
+        num_rows, num_cols, figsize=(width, high * num_rows),
+        subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
+        gridspec_kw={'wspace': 0.05, 'hspace': 0.01})
+
+    import string
+    i2 = 0
+    for i, (ax, plot) in enumerate(zip(axes.flatten(), plots)):
+        remove_axes = False
+
+        if i == 2 or i == 10:
+            ax.set_title(f'{col_titles[i]}\n                           ',
+                         fontsize=5, pad=2, loc='left')
+            ax.yaxis.set_label_position('left')
+            ax.text(-0.07, 0.5, row_titles[i], rotation=90,
+                    transform=ax.transAxes, fontsize=5,
+                    verticalalignment='center')
+        elif i == 3 or i == 4 or i == 11:
+            ax.set_title(f'{col_titles[i]}\n                           ',
+                         fontsize=5, pad=3, loc='left')
+        elif i == 7 or i == 15 or i == 20:
+            ax.yaxis.set_label_position('left')
+            ax.text(-0.07, 0.5, row_titles[i], rotation=90,
+                    transform=ax.transAxes, fontsize=5,
+                    verticalalignment='center')
+
+        if i in [4, 9, 14, 17, 22]:
+            ax.yaxis.tick_right()
+            ax.yaxis.set_label_position("right")
+            ax.set_yticks(yticks, crs=crs_latlon)
+            ax.tick_params(width=0.3, pad=1)
+            lat_formatter = LatitudeFormatter()
+            ax.yaxis.set_major_formatter(lat_formatter)
+            # ax.tick_params(labelsize=3)
+            # ax.set_extent(extent, crs=crs_latlon)
+
+        if i in [20,21,22, 23, 13, 14]:
+            ax.set_xticks(xticks, crs=crs_latlon)
+            ax.tick_params(width=0.3, pad=1)
+            lon_formatter = LongitudeFormatter(zero_direction_label=True)
+            ax.xaxis.set_major_formatter(lon_formatter)
+            ax.tick_params(labelsize=3)
+            #ax.set_extent(extent, crs=crs_latlon)
+
+        ax.tick_params(width=0.5, pad=1, labelsize=4)
+
+        if plot == 12:
+            if clim_plot.mean()['var'].values != 0:
+
+                if ocean_mask is True:
+                    mask_ocean = MakeMask(clim_plot)
+                    clim_plot = clim_plot * mask_ocean.mask
+
+                ax_new = fig.add_axes(
+                    [0.365, 0.41, 0.19, 0.18],
+                    projection=ccrs.PlateCarree())
+
+                cp = ax_new.contourf(clim_plot.lon.values[::plot_step],
+                                     clim_plot.lat.values[::plot_step],
+                                     clim_plot['var'][::plot_step,
+                                     ::plot_step],
+                                     levels=clim_levels,
+                                     transform=crs_latlon,
+                                     cmap=clim_cbar,
+                                     extend='both')
+
+                ax_new.coastlines(resolution='110m', linewidth=0.3)
+                ax_new.set_title('Plot 12', fontsize=5)
+
+                # Barra de colores si es necesario
+                cb = plt.colorbar(cp, ax=ax_new, fraction=0.046, pad=0.02,
+                                  shrink=0.6,
+                                  orientation='horizontal')
+                cb.ax.tick_params(labelsize=4, pad=0.1, length=1,
+                                  width=0.5)
+                for spine in cb.ax.spines.values():
+                    spine.set_linewidth(0.5)
+
+                if clim_plot_ctn and clim_plot_ctn.mean()['var'].values != 0:
+
+                    if ocean_mask is True and data_ctn_no_ocean_mask is False:
+                        mask_ocean = MakeMask(clim_plot_ctn)
+                        clim_plot_ctn = clim_plot_ctn * mask_ocean.mask
+
+                    ax_new.contour(clim_plot_ctn.lon.values[::plot_step],
+                                   clim_plot_ctn.lat.values[::plot_step],
+                                   clim_plot_ctn['var'][::plot_step, ::plot_step],
+                                   levels=clim_levels_ctn,
+                                   transform=crs_latlon,
+                                   colors='k')
+
+                else:
+
+                    ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
+                            transform=ax.transAxes, size=4)
+                    i2 += 1
+
+                    cp = ax.contour(clim_plot.lon.values[::plot_step],
+                                    clim_plot.lat.values[::plot_step],
+                                    clim_plot['var'][::plot_step, ::plot_step],
+                                    linewidth=1, levels=clim_levels,
+                                    transform=crs_latlon, cmap=clim_cbar)
+
+                ax_new.add_feature(cartopy.feature.LAND, facecolor='white')
+
+                # ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
+                ax_new.coastlines(color='k', linestyle='-', alpha=1,
+                                  resolution='110m', linewidth=0.2)
+                ax_new.set_title('Climatology', fontsize=4, pad=1)
+
+                gl = ax_new.gridlines(draw_labels=False, linewidth=0.3,
+                                      linestyle='-',
+                                      zorder=20)
+
+                gl.ylocator = plt.MultipleLocator(20)
+                gl.xlocator = plt.MultipleLocator(60)
+
+                for spine in ax_new.spines.values():
+                    spine.set_linewidth(0.5)
+
+            ax.axis('off')
+
+        else:
+
+            if data_ctn is not None:
+                if levels_ctn is None:
+                    levels_ctn = levels.copy()
+                try:
+                    if isinstance(levels_ctn, np.ndarray):
+                        levels_ctn = levels_ctn[levels_ctn != 0]
+                    else:
+                        levels_ctn.remove(0)
+                except:
+                    pass
+                aux_ctn = data_ctn.sel(plots=plot)
+
+                if aux_ctn.mean().values != 0:
+
+                    ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
+                                           f"$N={titles[plot]}$",
+                            transform=ax.transAxes, size=4)
+                    i2 += 1
+
+                    if ocean_mask is True and data_ctn_no_ocean_mask is False:
+                        mask_ocean = MakeMask(aux_ctn)
+                        aux_ctn = aux_ctn * mask_ocean.mask
+
+                    try:
+                        aux_ctn_var = aux_ctn['var'].values
+                    except:
+                        aux_ctn_var = aux_ctn.values
+
+                    ax.contour(data_ctn.lon.values[::plot_step],
+                               data_ctn.lat.values[::plot_step],
+                               aux_ctn_var[::plot_step,::plot_step],
+                               linewidths=0.4,
+                               levels=levels_ctn, transform=crs_latlon,
+                               colors=color_ctn)
+                else:
+                    remove_axes = True
+
+            aux = data.sel(plots=plot)
+            try:
+                aux_var = aux['var'].values
+            except:
+                aux_var = aux.values
+
+            if aux.mean().values != 0:
+
+                if ocean_mask is True:
+                    mask_ocean = MakeMask(aux)
+                    aux_var = aux_var * mask_ocean.mask
+
+                im = ax.contourf(aux.lon.values[::plot_step],
+                                 aux.lat.values[::plot_step],
+                                 aux_var[::plot_step,::plot_step],
+                                 levels=levels,
+                                 transform=crs_latlon, cmap=cmap, extend='both')
+
+                ax.add_feature(cartopy.feature.LAND, facecolor='white',
+                               linewidth=0.5)
+                #ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
+                ax.coastlines(color='k', linestyle='-', alpha=1,
+                              linewidth=0.2, resolution='110m')
+                gl = ax.gridlines(draw_labels=False, linewidth=0.1,
+                                  linestyle='-',
+                                  zorder=20)
+                gl.ylocator = plt.MultipleLocator(20)
+                gl.xlocator = plt.MultipleLocator(60)
+
+            else:
+                remove_axes = True
+
+            if remove_axes:
+                ax.axis('off')
+
+            for spine in ax.spines.values():
+                spine.set_linewidth(0.5)
+    # cbar_pos = 'H'
+    if cbar_pos.upper() == 'H':
+        pos = fig.add_axes([0.261, 0, 0.5, 0.02])
+        cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
+        cb.ax.tick_params(labelsize=4, pad=1)
+
+        fig.subplots_adjust(bottom=0.05, wspace=0, hspace=0.25, left=0, right=1,
+                            top=1)
+
+    elif cbar_pos.upper() == 'V':
+        pos = fig.add_axes([0.95, 0.2, 0.02, 0.5])
+        cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='vertical')
+        cb.ax.tick_params(labelsize=4, pad=1)
+
+        fig.subplots_adjust(bottom=0, wspace=0.5, hspace=0.25, left=0.02, right=0.9,
+                            top=1)
+    else:
+        print(f"cbar_pos {cbar_pos} no valido")
+
+
+    if save:
+        if pdf:
+            plt.savefig(f"{out_dir}{namefig}.pdf", dpi=dpi, bbox_inches='tight')
+        else:
+            plt.savefig(f"{out_dir}{namefig}.jpg", dpi=dpi, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
 
 def PlotFinal14(data, levels, cmap, titles, namefig, save, dpi, out_dir,
                 sig_points=None, lons=None, levels2=None, cmap2=None,

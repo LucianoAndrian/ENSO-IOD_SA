@@ -24,7 +24,8 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset
+from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
+    BinsByCases, PlotFinal_CompositeByMagnitude
 
 # --
 if save:
@@ -57,6 +58,7 @@ sig_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/nc_quantiles/' \
 data_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1940_2020/'
 
 cases_dir = "/pikachu/datos/luciano.andrian/cases_fields/"
+dates_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
 # Funciones ------------------------------------------------------------------ #
 def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
                                       'observado/ncfiles/data_obs_d_w_c/'):
@@ -512,3 +514,229 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
 
 print('Done CFSv2 Composite ------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
+
+print('# CFSv2 Composite by magnitude -------------------------------------- #')
+print('Set -----------------------------------------------------------------')
+cases = ['dmi_puros_pos', 'dmi_puros_neg',
+        'n34_puros_pos', 'n34_puros_neg',
+        'sim_pos', 'sim_neg',
+        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+        'neutros']
+
+row_titles = [None, None, 'Strong EN', None, None, None,
+              None, 'Moderate EN', None, None, 'Neutro ENSO',
+              None, None, None, None, 'Moderate LN', None, None,
+              None, None, 'Strong LN']
+
+col_titles = [None, None, 'Neutro IOD', 'Moderate IOD+',
+              'Strong IOD+', None, None, None, None, None,
+              'Strong IOD-', 'Moderate IOD-']
+
+# Orden de ploteo ------------------------------------------------------------ #
+cases_magnitude = [None, None, 's_en', 's_en-m_iodp', 's_en-s_iodp',
+                   None, None, 'm_en', 'm_en-m_iodp', 'm_en-s_iodp',
+                   's_iodn', 'm_iodn', 'clim', 'm_iodp', 's_iodp',
+                   'm_ln-s_iodn', 'm_ln-m_iodn', 'm_ln', None, None,
+                   's_ln-s_iodn', 's_ln-m_iodn', 's_ln', None, None]
+
+bin_limits = [[-4.5,-1], #0 s
+              [-1, -0.5], #1 m
+              [-0.5, 0.5], #2 -
+              [0.5, 1], #3  m
+              [1, 4.5]] #4 s
+
+bins_by_cases_dmi = [[3, 4], [0, 1],
+                     [2], [2],
+                     [3, 4], [0, 1],
+                     [0, 1],[3, 4],
+                     [2]]
+
+bins_by_cases_n34 = [[2], [2],
+                     [3, 4], [0,1],
+                     [3, 4], [0, 1],
+                     [3, 4], [0, 1],
+                     [2]]
+
+
+# Descubriendo el orden de computo original ---------------------------------- #
+# Si, muy pracito...
+# y asignando un nombre para poder usar cases_magnitud definido arriba
+bin_names = ['s', 'm', '', 'm', 's']
+cases_names = []
+for c_count, c  in enumerate(cases):
+    aux_h = '-'
+    for d in bins_by_cases_dmi[c_count]:
+        d_aux = sum(bin_limits[d])
+        d_aux_mag_name = bin_names[d]
+        d_aux_h = '_'
+        if d_aux>0:
+            d_aux_name = 'iodp'
+        elif d_aux<0:
+            d_aux_name = 'iodn'
+        elif d_aux==0:
+            d_aux_name = ''
+            d_aux_mag_name = ''
+            d_aux_h = ''
+            aux_h = ''
+
+        iod_name = f"{d_aux_mag_name}{d_aux_h}{d_aux_name}"
+
+        for n in bins_by_cases_n34[c_count]:
+            n_aux = sum(bin_limits[n])
+            n_aux_mag_name = bin_names[n]
+            n_aux_h = '_'
+
+            if n_aux > 0:
+                n_aux_name = 'en'
+            elif n_aux < 0:
+                n_aux_name = 'ln'
+            elif n_aux == 0:
+                n_aux_name = ''
+                n_aux_mag_name=''
+                n_aux_h = ''
+                aux_h = ''
+
+            enso_name = f"{n_aux_mag_name}{n_aux_h}{n_aux_name}"
+            case_name = f"{enso_name}{aux_h}{iod_name}"
+            cases_names.append(case_name)
+
+
+
+variables = ['tref', 'prec']
+aux_scales = [scale_t, scale_pp]
+aux_cbar = [cbar, cbar_pp]
+aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
+aux_scales_clim = [np.linspace(0,30,11), np.linspace(0, 300, 11)]
+aux_cbar_clim = ['OrRd', 'PuBu']
+
+variables_hgt = ['hgt'] # vamos a necesitar otro nivel?
+aux_scales_hgt = [scale_hgt_comp_cfsv2]
+aux_cbar_hgt = [cbar]
+
+for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim in zip(variables, aux_scales, aux_cbar,
+                                          aux_scales_clim, aux_cbar_clim):
+    if v == 'prec':
+        fix = 30
+        fix_clim = 0
+    else:
+        fix = 1
+        fix_clim = 273
+
+    aux_comps = {}
+    aux_num_comps = {}
+    aux_comps_hgt = {}
+    aux_num_comps_hgt = {}
+    n_count = 0
+
+    for c_count, c in enumerate(cases):
+        cases_bin, num_bin, auxx = BinsByCases(
+            v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c, c_count=c_count,
+            bin_limits=bin_limits,
+            bins_by_cases_dmi=bins_by_cases_dmi,
+            bins_by_cases_n34=bins_by_cases_n34,
+            snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
+            neutro_clim=True)
+
+        bins_aux_dmi = bins_by_cases_dmi[c_count]
+        bins_aux_n34 = bins_by_cases_n34[c_count]
+
+        for b_dmi in range(0, len(bins_aux_dmi)):
+            for b_n34 in range(0, len(bins_aux_n34)):
+                aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
+                aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
+                n_count += 1
+
+        # cases_bin_hgt, num_bin_hgt, auxx_hgt = BinsByCases(
+        #     v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c, c_count=c_count,
+        #     bin_limits=bin_limits,
+        #     bins_by_cases_dmi=bins_by_cases_dmi,
+        #     bins_by_cases_n34=bins_by_cases_n34,
+        #     snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
+        #     neutro_clim=True)
+        #
+        # bins_aux_dmi_hgt = bins_by_cases_dmi[c_count]
+        # bins_aux_n34_hgt = bins_by_cases_n34[c_count]
+        #
+        # for b_dmi_hgt in range(0, len(bins_aux_dmi_hgt)):
+        #     for b_n34_hgt in range(0, len(bins_aux_n34_hgt)):
+        #         aux_comps_hgt[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
+        #         aux_num_comps_hgt[cases_names[n_count]] = num_bin[b_dmi][b_n34]
+        #         n_count += 1
+
+
+    clim = xr.open_dataset(f'/pikachu/datos/luciano.andrian/'
+                           f'val_clim_cfsv2/hindcast_{v}_cfsv2_mc_no-norm_son.nc'
+                           ) * fix
+    clim = clim.rename({list(clim.data_vars)[0]: 'var'})
+
+    lat = np.arange(-60, 20 + 1)
+    lon = np.arange(275, 330 + 1)
+    clim = clim.sel(lon=lon, lat=lat)
+    clim = clim - fix_clim
+
+
+    cases_ordenados = []
+    cases_ordenados_hgt = []
+
+    aux_num = []
+    aux_num_hgt = []
+    for c in cases_magnitude:
+        try:
+            aux = aux_comps[c]
+            aux_num.append(aux_num_comps[c])
+
+            # aux_hgt = aux_comps_hgt[c]
+            # aux_num_hgt.append(aux_num_comps_hgt[c])
+        except:
+            aux = aux_comps[cases_magnitude[2]] * 0
+            aux_num.append('')
+
+            # aux_hgt = aux_comps_hgt[cases_magnitude[2]] * 0
+            # aux_num_hgt.append('')
+
+        da = xr.DataArray(aux, dims=["lat", "lon"],
+                          coords={"lat": lat, "lon": lon},
+                          name="var")
+        cases_ordenados.append(da)
+
+        # da_hgt = xr.DataArray(aux_hgt, dims=["lat", "lon"],
+        #                   coords={"lat": lat, "lon": lon},
+        #                   name="var")
+        # cases_ordenados_hgt.append(da_hgt)
+
+    cases_ordenados = xr.concat(cases_ordenados, dim='plots')
+    # cases_ordenados_hgt = xr.concat(cases_ordenados_hgt, dim='plots')
+
+    PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
+                                   cmap=v_cbar, titles=aux_num,
+                                   namefig=f'{v}_cfsv2_comp_by_magnitude',
+                                   map='sa', save=save, dpi=dpi,
+                                   out_dir=out_dir, #data_ctn=cases_ordenados_hgt,
+                                   #levels_ctn = np.linspace(-500,500,11),
+                                   color_ctn='k', row_titles=row_titles,
+                                   col_titles=col_titles, clim_plot=clim,
+                                   clim_cbar=v_cbar_clim,
+                                   clim_levels=v_scale_clim,
+                                   high=1.5, width=5.5,
+                                   clim_plot_ctn=None,
+                                   clim_levels_ctn=False,
+                                   ocean_mask=True,
+                                   data_ctn_no_ocean_mask=False,
+                                   plot_step=1,
+                                   cbar_pos='V')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
