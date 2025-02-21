@@ -15,6 +15,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 from matplotlib.font_manager import FontProperties
+import scipy.stats as st
 
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
@@ -3381,27 +3382,6 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     [0.365, 0.41, 0.19, 0.18],
                     projection=ccrs.PlateCarree())
 
-                cp = ax_new.contourf(clim_plot.lon.values[::plot_step],
-                                     clim_plot.lat.values[::plot_step],
-                                     clim_plot['var'][::plot_step,
-                                     ::plot_step],
-                                     levels=clim_levels,
-                                     transform=crs_latlon,
-                                     cmap=clim_cbar,
-                                     extend='both')
-
-                ax_new.coastlines(resolution='110m', linewidth=0.3)
-                ax_new.set_title('Plot 12', fontsize=5)
-
-                # Barra de colores si es necesario
-                cb = plt.colorbar(cp, ax=ax_new, fraction=0.046, pad=0.02,
-                                  shrink=0.6,
-                                  orientation='horizontal')
-                cb.ax.tick_params(labelsize=4, pad=0.1, length=1,
-                                  width=0.5)
-                for spine in cb.ax.spines.values():
-                    spine.set_linewidth(0.5)
-
                 if clim_plot_ctn and clim_plot_ctn.mean()['var'].values != 0:
 
                     if ocean_mask is True and data_ctn_no_ocean_mask is False:
@@ -3411,21 +3391,47 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     ax_new.contour(clim_plot_ctn.lon.values[::plot_step],
                                    clim_plot_ctn.lat.values[::plot_step],
                                    clim_plot_ctn['var'][::plot_step, ::plot_step],
-                                   levels=clim_levels_ctn,
-                                   transform=crs_latlon,
-                                   colors='k')
+                                   linewidths=0.4,
+                                   levels=clim_levels_ctn, transform=crs_latlon,
+                                   colors=color_ctn)
+
+                cp = ax_new.contourf(clim_plot.lon.values[::plot_step],
+                                     clim_plot.lat.values[::plot_step],
+                                     clim_plot['var'][::plot_step,
+                                     ::plot_step],
+                                     levels=clim_levels,
+                                     transform=crs_latlon,
+                                     cmap=clim_cbar,
+                                     extend='both')
+
+
+
+                # ax_new.coastlines(color='k', linestyle='-', alpha=1,
+                #                   resolution='110m', linewidth=0.2)
+
+                ax_new.set_title('Plot 12', fontsize=5)
+
+                # Barra de colores si es necesario
+                cb = plt.colorbar(cp, ax=ax_new, fraction=0.046,
+                                  pad=0.02, shrink=0.6,
+                                  orientation='horizontal')
+                cb.ax.tick_params(labelsize=4, pad=0.1, length=1,
+                                  width=0.5)
+                for spine in cb.ax.spines.values():
+                    spine.set_linewidth(0.5)
 
                 else:
 
-                    ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
-                            transform=ax.transAxes, size=4)
-                    i2 += 1
-
-                    cp = ax.contour(clim_plot.lon.values[::plot_step],
-                                    clim_plot.lat.values[::plot_step],
-                                    clim_plot['var'][::plot_step, ::plot_step],
-                                    linewidth=1, levels=clim_levels,
-                                    transform=crs_latlon, cmap=clim_cbar)
+                    pass
+                    # ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
+                    #         transform=ax.transAxes, size=4)
+                    # i2 += 1
+                    #
+                    # cp = ax.contour(clim_plot.lon.values[::plot_step],
+                    #                 clim_plot.lat.values[::plot_step],
+                    #                 clim_plot['var'][::plot_step, ::plot_step],
+                    #                 linewidth=0.4, levels=clim_levels,
+                    #                 transform=crs_latlon, cmap=clim_cbar)
 
                 ax_new.add_feature(cartopy.feature.LAND, facecolor='white')
 
@@ -3989,6 +3995,153 @@ def PlotFinalFigS3(data, data_ctn, levels, cmap, title0, namefig, save, dpi,
     fig.subplots_adjust(bottom=0.1, wspace=0, hspace=0.25, left=0, right=1,
                         top=1)
 
+    if save:
+        plt.savefig(f"{out_dir}{namefig}.pdf", dpi=dpi, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+################################################################################
+# PDF
+def pdf_fit_normal(data, size, start, end):
+    y, x = np.histogram(data)
+    x = (x + np.roll(x, -1))[:-1] / 2.0
+
+    #best_distributions = []
+    # for distribution_name in ['norm']:
+    #     distribution = getattr(st, distribution_name)
+
+    distribution = st.norm
+
+    # ajuste distribucion a la data
+    params = distribution.fit(data)
+
+    # parametros
+    arg = params[:-2]
+    loc = params[-2]
+    scale = params[-1]
+
+    # Build PDF and turn into pandas Series
+    x = np.linspace(start, end, size)
+    y = distribution.pdf(x, loc=loc, scale=scale, *arg)
+    pdf = pd.Series(y, x)
+
+
+    # calculo de pdf ajustada y error en el ajuste
+    # (por si es necesrio apra otra cosa)
+    #pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
+    #sse = np.sum(np.power(y - pdf, 2.0))
+
+    # identify if this distribution is better
+    # best_distributions.append((distribution, params, sse,
+    #                            distribution_name))
+
+    # best_dist = sorted(best_distributions, key=lambda x: x[2])[0]
+    # dist = best_dist[0]
+    # params =  best_dist[1]
+    #
+    # arg = params[:-2]
+    # loc = params[-2]
+    # scale = params[-1]
+
+    return pdf
+
+def PDF_cases(variable, season, box_lons, box_lats, box_name,
+              cases, cases_dir):
+
+    if variable == 'prec':
+        fix_factor = 30
+        fix_rest = 0
+    elif variable == 'tref':
+        fix_factor = 1
+        fix_rest = 273
+    else:
+        fix_factor = 9.8
+
+    # climatologia
+    neutro = xr.open_dataset(
+        f'{cases_dir}{variable}_neutros_{season}_detrend_05.nc')
+    neutro = neutro.rename({list(neutro.data_vars)[0]: 'var'})
+    neutro = neutro * fix_factor
+    mask = MakeMask(neutro, 'var')
+
+    resultados_regiones = {}
+    for bl, bt, name in zip(box_lons, box_lats, box_name):
+        aux_neutro = neutro.sel(lon=slice(bl[0], bl[1]),
+                                lat=slice(bt[0], bt[1]))
+        clim = aux_neutro.mean(['lon', 'lat'])
+
+        aux_resultados = {}
+        if variable == 'prec':
+            if name == 'Patagonia':
+                startend = -30
+            elif name == 'N-SESA':
+                startend = -80
+            else:
+                startend = -60
+        else:
+            startend = -2
+        aux_clim = clim - clim.mean('time')
+        aux_clim = np.nan_to_num(aux_clim['var'].values)
+
+        pdf_clim_full = pdf_fit_normal(aux_clim, len(aux_clim),
+                                       -1 * startend, startend)
+
+        aux_resultados['clim'] = pdf_clim_full
+
+        for c_count, c in enumerate(cases):
+            case = xr.open_dataset(f'{cases_dir}{variable}_{c}_{season}_detrend_05.nc')
+            case = case.rename({list(case.data_vars)[0]: 'var'})
+            case = case * fix_factor
+            case = case.sel(lon=slice(bl[0], bl[1]), lat=slice(bt[0], bt[1]))
+            case = case.mean(['lon', 'lat'])
+
+            # -
+            case_anom = case - clim.mean('time')
+            case_anom = np.nan_to_num(case_anom['var'].values)
+
+            pdf_case = pdf_fit_normal(case_anom, len(case_anom),
+                                      -startend,  startend)
+
+            aux_resultados[c] = pdf_case
+
+        resultados_regiones[name] = aux_resultados
+
+    return resultados_regiones
+
+def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
+             out_dir='', save=False, dpi=100):
+
+    positive_cases_colors = ['red', '#F47B00', 'forestgreen']
+    negative_cases_colors = ['#509DFE', '#00E071', '#FF3AA0']
+    colors_cases = [positive_cases_colors, negative_cases_colors]
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(width, high * 2),
+        gridspec_kw={'wspace': 0.05, 'hspace': 0.01})
+
+
+    for ax_count, (ax, cases, color_case) in enumerate(zip(
+            axes.flatten(), selected_cases, colors_cases)):
+
+        if ax_count == 1:
+            ax.yaxis.tick_right()
+
+        max_y = []
+        ax.plot(data['clim'], lw=2.5, color='k', label='Clim.')
+        max_y.append(max(data['clim']))
+        for c_count, c in enumerate(cases[1::]):
+            aux_case = data[c]
+            ax.plot(aux_case, lw=2.5, color=color_case[c_count], label=c)
+            max_y.append(max(aux_case))
+
+        ax.grid(alpha=0.5)
+        ax.legend(loc='best')
+        ax.set_ylim(0, max(max_y) + 0.001)
+
+    fig.suptitle(title, fontsize=10)
+    plt.yticks(size=10)
+    plt.xticks(size=10)
+    plt.tight_layout()
     if save:
         plt.savefig(f"{out_dir}{namefig}.pdf", dpi=dpi, bbox_inches='tight')
         plt.close()
