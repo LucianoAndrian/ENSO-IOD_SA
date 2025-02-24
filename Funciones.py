@@ -4147,4 +4147,121 @@ def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
         plt.close()
     else:
         plt.show()
+
+################################################################################
+# Bins
+def SelectBins2D(serie, bins_limits):
+
+    bins = []
+
+    bins_limits = [[bins_limits[i], bins_limits[i+1]]
+                   for i in range(len(bins_limits)-1)]
+
+    for bl in bins_limits:
+        bmin = bl[0]
+        bmax = bl[1]
+        x = serie.where(serie >= bmin)
+        x = x.where(x < bmax)
+        bins.append(x)
+
+    bins = xr.concat(bins, dim='bins')
+
+    return bins
+
+def SelectDatesBins(bins, bin_data, min_percentage=0.1):
+
+    bins_name_var = list(bins.data_vars)[0]
+    bin_data_name_var = list(bin_data.data_vars)[0]
+
+    bin_data_f = []
+    bin_len = []
+    for bl in bins.bins.values:
+        aux_bins = bins.sel(bins=bl)
+
+        bins_r = []
+        bin_len_r = []
+        for r in bins.r.values:
+            aux = aux_bins.sel(r=r)
+
+            bin_len_r.append(len(aux.where(
+                ~np.isnan(aux.sst), drop=True)[bins_name_var]))
+
+            bin_data_sel = bin_data.sel(r=r)
+            dates_bins = aux.time[np.where(~np.isnan(aux[bins_name_var]))]
+            bin_data_sel = bin_data_sel.sel(time=bin_data_sel.time.isin(dates_bins))
+            bins_r.append(bin_data_sel)
+
+        bin_len.append(np.sum(bin_len_r))
+        bins_r_f = xr.concat(bins_r, dim='r')
+        bin_data_f.append(bins_r_f)
+
+    bin_data_f = xr.concat(bin_data_f, dim='bins')
+
+
+    bin_data_mean = bin_data_f.mean(['r', 'time'], skipna=True)
+    bin_data_mean = list(bin_data_mean[bin_data_name_var].values)
+
+    bin_data_std = bin_data_f.std(['r', 'time'], skipna=True)
+    bin_data_std = list(bin_data_std[bin_data_name_var].values)
+
+    check = sum(bin_len)*min_percentage
+    # bin_data_mean = [0 if count < check else mean for count, mean in
+    #                  zip(bin_len, bin_data_mean)]
+
+    bin_data_mean, bin_data_std = zip(*[
+        (0 if count < check else mean,
+         0 if count < check else std)
+        for count, mean, std in
+        zip(bin_len, bin_data_mean, bin_data_std)
+    ])
+
+    return bin_data_mean, bin_data_std, bin_len
+
+def PlotBars(x, bin_n, bin_n_err, bin_n_len,
+             bin_d, bin_d_err, bin_d_len,
+             title='', name_fig='fig', out_dir=out_dir, save=False,
+             ymin=-80, ymax=45, dpi=100, ylabel='Anomaly',
+             bar_n_color=None, bar_n_error_color=None, bar_d_color=None,
+             bar_d_error_color=None):
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure(1, figsize=(7, 7), dpi=dpi)
+    ax = fig.add_subplot(111)
+    plt.hlines(y=0, xmin=-4, xmax=4, color='k')
+    ax.bar(x + 0.075, bin_n, color=bar_n_color, alpha=1, width=0.15,
+           label='Niño3.4')
+    ax.errorbar(x + 0.075, bin_n, yerr=bin_n_err, capsize=4, fmt='o', alpha=1,
+                elinewidth=0.9, ecolor=bar_n_error_color, mfc='w',
+                mec=bar_n_error_color, markersize=5)
+    ax2 = ax.twinx()
+    ax2.bar(x + 0.075, bin_n_len, color=bar_n_color, alpha=0.5,
+            width=0.15)
+
+    ax.bar(x - 0.075, np.nan_to_num(bin_d), color=bar_d_color, alpha=1,
+           width=0.15, label='DMI')
+    ax.errorbar(x - 0.075, bin_d, yerr=bin_d_err, capsize=4, fmt='o', alpha=1,
+                elinewidth=0.9, ecolor=bar_d_error_color, mec=bar_d_error_color,
+                mfc='w', markersize=5)
+    ax2.bar(x - 0.075, bin_d_len, color=bar_d_color, alpha=0.5, width=0.15)
+
+    ax.legend(loc='upper left')
+    ax.set_ylim(ymin, ymax)
+    ax2.set_ylim(0, 3000)
+
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax2.set_ylabel('number of samples', fontsize=10)
+
+    ax.set_xlabel('SST index (of std)', fontsize=15)
+    ax.xaxis.set_tick_params(labelsize=12)
+    ax.grid(True)
+
+    plt.title(title, fontsize=15)
+    plt.xlim(-3.5, 3.5)
+
+    if save:
+        plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
 ################################################################################

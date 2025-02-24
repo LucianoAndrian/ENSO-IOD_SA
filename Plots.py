@@ -16,7 +16,6 @@ pd.options.mode.chained_assignment = None
 from matplotlib import colors
 import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind
-
 import matplotlib.path as mpath
 
 import warnings
@@ -26,9 +25,10 @@ warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
-    BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs
+    BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
+    SelectBins2D, SelectDatesBins, PlotBars, MakeMask
 
-# --
+# ---------------------------------------------------------------------------- #
 if save:
     dpi = 300
 else:
@@ -801,7 +801,11 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
 print('Done CFSv2 Composite by magnitude ------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
+
 print(' PDFs CFSv2 ---------------------------------------------------------- ')
+box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
+box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
+box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
 
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
@@ -810,9 +814,6 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          # todos de cada caso para validación
          'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg',
          'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
-box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
-box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
-box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
 
 for v in ['tref', 'prec']:
 
@@ -827,3 +828,73 @@ for v in ['tref', 'prec']:
         PlotPdfs(data=result[k], selected_cases=selected_cases,
                  width=10, high=2.5, title=k, namefig=f'PDF_{v}_{k}',
                  out_dir=out_dir, save=save, dpi=dpi)
+
+print('Done CFSv2 PDFs ------------------------------------------------------ ')
+print(' --------------------------------------------------------------------- ')
+bar_n_color = 'indianred'
+bar_n_error_color = 'indianred'
+bar_d_color = 'forestgreen'
+bar_d_error_color = 'forestgreen'
+s = 'SON'
+bins_limits = np.arange(-3.25, 3.25 + 0.5, 0.5)
+x = np.linspace(round(min(bins_limits)), round(max(bins_limits)),
+                len(bins_limits)-1)
+
+# indices
+data_dmi = xr.open_dataset(dates_dir + 'DMI_' + s + '_Leads_r_CFSv2.nc')
+data_n34 = xr.open_dataset(dates_dir + 'N34_' + s + '_Leads_r_CFSv2.nc')
+
+# normalizando por sd
+data_dmi = (data_dmi - data_dmi.mean(['time', 'r'])) / \
+           data_dmi.std(['time', 'r'])
+data_n34 = (data_n34 - data_n34.mean(['time', 'r'])) / \
+           data_n34.std(['time', 'r'])
+
+box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
+box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
+box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
+
+for v in ['tref', 'prec']:
+
+    if v == 'prec':
+        fix = 30
+        fix_clim = 0
+        ylabel = 'prec anomaly [mm/month]'
+        ymin=-80
+        ymax=40
+    else:
+        fix = 1
+        fix_clim = 273
+        ylabel = 'tref anomaly [ºC/month]'
+        ymin=-2
+        ymax=1
+
+    data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}.nc')
+    data *= fix
+    data = data - data.mean(['time', 'r']) # anom
+    mask = MakeMask(data, list(data.data_vars)[0]) # mask
+    data *= mask
+
+    bins_dmi = SelectBins2D(serie=data_dmi,
+                          bins_limits=bins_limits)
+
+    bins_n34 = SelectBins2D(serie=data_n34,
+                          bins_limits=bins_limits)
+
+    for bn, bl, bt in zip(box_name, box_lons, box_lats):
+        region = data.sel(lat=slice(min(bt), max(bt)), lon=slice(bl[0], bl[1]))
+        region = region.mean(['lon', 'lat'])
+
+        bins_n34_mean, bins_n34_std, bins_n34_len = \
+            SelectDatesBins(bins=bins_n34, bin_data=region, min_percentage=0.01)
+        bins_dmi_mean, bins_dmi_std, bins_dmi_len = \
+            SelectDatesBins(bins=bins_dmi, bin_data=region, min_percentage=0.01)
+
+        PlotBars(x, bins_n34_mean, bins_n34_std, bins_n34_len,
+                 bins_dmi_mean, bins_dmi_std, bins_dmi_len,
+                 title=f'{bn} - {v} anomaly \n (no se muestran <1% de casos)',
+                 name_fig=f'bins_{bn}-{v}', out_dir=out_dir, save=save,
+                 ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
+                 bar_n_color=bar_n_color, bar_n_error_color=bar_n_error_color,
+                 bar_d_color=bar_d_color, bar_d_error_color=bar_d_error_color)
+print(' Bins ---------------------------------------------------------------- ')
