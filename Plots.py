@@ -1020,5 +1020,5 @@ for v in ['prec', 'tref']:
                    title='', save=False, name_fig='fig', out_dir='~/', dpi=100,
                    bin_limits=bin_limits)
 
-# CONTINUAR y EMPROLIJAR!
+# CONTINUAR y EMPROLIJAR! hay que correr cases_names!
 ################################################################################

@@ -4197,7 +4197,7 @@ def SelectDatesBins(bins, bin_data, min_percentage=0.1):
             bins_r.append(bin_data_sel)
 
         bin_len.append(np.sum(bin_len_r))
-        bins_r_f = xr.concat(bins_r, dim='r', join='outer')
+        bins_r_f = xr.concat(bins_r, dim='r')
         bin_data_f.append(bins_r_f)
 
     bin_data_f = xr.concat(bin_data_f, dim='bins')
