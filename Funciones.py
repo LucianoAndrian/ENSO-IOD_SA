@@ -1892,7 +1892,8 @@ def SelectBins(data, min, max, sd=1):
 
 def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
                 bin_limits, bins_by_cases_dmi, bins_by_cases_n34, dates_dir,
-                cases_dir, snr=False, neutro_clim=False):
+                cases_dir, snr=False, neutro_clim=False, box=False, box_lat=[],
+                box_lon=[]):
 
     def Weights(data):
         weights = np.transpose(
@@ -1982,6 +1983,14 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     print( '1.2')
     anom = anom.sortby(anom.time.dt.month)
 
+    if box is True:
+        anom = anom.sel(lat=slice(min(box_lat), max(box_lat)),
+                        lon=slice(box_lon[0], box_lon[1]))
+        anom = anom.mean(['lon', 'lat'], skipna=True)
+        aux_set_ds = ['time']
+    else:
+        aux_set_ds = ['time', 'lat', 'lon']
+
     # 2. Vinculo fechas case -> índices DMI y N34 para poder clasificarlos
     # las fechas entre el case variable y el case indices COINCIDEN,
     # DE ESA FORMA SE ELIGIERON LOS CASES VARIABLE
@@ -1994,7 +2003,6 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')
     aux_cases = aux_cases.rename({list(aux_cases.data_vars)[0]: 'index'})
 
-
     case_sel_dmi = SelectVariables(aux_cases, data_dates_dmi_or)
     case_sel_dmi = case_sel_dmi.sortby(case_sel_dmi.time.dt.month)
     case_sel_dmi_n34 = SelectVariables(aux_cases, data_dates_n34_or)
@@ -2004,7 +2012,7 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     try:
         data_merged = xr.Dataset(
             data_vars=dict(
-                var=(['time', 'lat', 'lon'], anom['var'].values),
+                var=(aux_set_ds, anom['var'].values),
                 dmi=(['time'], case_sel_dmi.sst.values),
                 n34=(['time'], case_sel_dmi_n34.sst.values),
             ),
@@ -2043,7 +2051,7 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
 
         data_merged = xr.Dataset(
             data_vars=dict(
-                var=(['time', 'lat', 'lon'], anom['var'].values),
+                var=(aux_set_ds, anom['var'].values),
                 dmi=(['time'], case_sel_dmi.sst.values),
                 n34=(['time'], case_sel_dmi_n34.sst.values),
             ),
@@ -2051,7 +2059,6 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
                 time=anom.time.values
             )
         )
-
 
     bins_aux_dmi = bins_by_cases_dmi[c_count]
     bins_aux_n34 = bins_by_cases_n34[c_count]
@@ -4182,21 +4189,18 @@ def SelectDatesBins(bins, bin_data, min_percentage=0.1):
         bin_len_r = []
         for r in bins.r.values:
             aux = aux_bins.sel(r=r)
-
             bin_len_r.append(len(aux.where(
                 ~np.isnan(aux.sst), drop=True)[bins_name_var]))
-
             bin_data_sel = bin_data.sel(r=r)
             dates_bins = aux.time[np.where(~np.isnan(aux[bins_name_var]))]
             bin_data_sel = bin_data_sel.sel(time=bin_data_sel.time.isin(dates_bins))
             bins_r.append(bin_data_sel)
 
         bin_len.append(np.sum(bin_len_r))
-        bins_r_f = xr.concat(bins_r, dim='r')
+        bins_r_f = xr.concat(bins_r, dim='r', join='outer')
         bin_data_f.append(bins_r_f)
 
     bin_data_f = xr.concat(bin_data_f, dim='bins')
-
 
     bin_data_mean = bin_data_f.mean(['r', 'time'], skipna=True)
     bin_data_mean = list(bin_data_mean[bin_data_name_var].values)
@@ -4205,8 +4209,6 @@ def SelectDatesBins(bins, bin_data, min_percentage=0.1):
     bin_data_std = list(bin_data_std[bin_data_name_var].values)
 
     check = sum(bin_len)*min_percentage
-    # bin_data_mean = [0 if count < check else mean for count, mean in
-    #                  zip(bin_len, bin_data_mean)]
 
     bin_data_mean, bin_data_std = zip(*[
         (0 if count < check else mean,
@@ -4265,3 +4267,60 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
         plt.show()
 
 ################################################################################
+
+
+def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap, color_thr,
+               title, save=False, name_fig='fig', out_dir='~/', dpi=100,
+               bin_limits=None):
+
+    cases_ordenados = np.flip(cases_ordenados)
+    num_ordenados = np.flip(num_ordenados)
+
+    fig = plt.figure(dpi=dpi, figsize=(8, 7))
+    ax = fig.add_subplot(111)
+    im = ax.imshow(cases_ordenados, cmap=cmap, vmin=vmin, vmax=vmax)
+
+    for i in range(0, len(bin_limits)):
+        for j in range(0, len(bin_limits)):
+            if np.abs(cases_ordenados[i, j]) > color_thr:
+                color_num = 'white'
+            else:
+                color_num = 'k'
+            if ~np.isnan(num_ordenados[i, j]):
+                ax.text(j, i, num_ordenados[i, j].astype(np.int64),
+                        ha='center', va='center', color=color_num)
+
+
+    xylimits=[-.5, -.5+len(bin_limits)]
+    ax.set_xlim(xylimits[::-1])
+    ax.set_ylim(xylimits)
+    #
+
+    original_ticks = np.arange(-.5, -.5+len(bin_limits)+0.5)
+    new_tickx=np.unique(bin_limits)
+    ax.set_xticks(original_ticks, new_tickx)
+    ax.set_yticks(original_ticks, new_tickx)
+
+    ax.set_ylabel('Niño3.4 - SST index (of std)', fontsize=11)
+    ax.set_xlabel('DMI - SST index (of std)', fontsize=11)
+    fig.suptitle(title, size=12)
+
+    inf_neutro_border = original_ticks[int(np.floor(len(original_ticks)/2))]-1
+    upp_neutro_border = original_ticks[int(np.ceil(len(original_ticks)/2))]
+    plt.axhline(y=inf_neutro_border, color='k', linestyle='-', linewidth=2)
+    plt.axhline(y=upp_neutro_border, color='k', linestyle='-', linewidth=2)
+    plt.axvline(x=inf_neutro_border, color='k', linestyle='-', linewidth=2)
+    plt.axvline(x=upp_neutro_border, color='k', linestyle='-', linewidth=2)
+
+    ax.margins(0)
+    ax.grid(which='major', alpha=0.5, color='k')
+    plt.colorbar(im, ticks=levels,
+                 fraction=0.046, pad=0.04,
+                 boundaries=levels)
+    plt.tight_layout()
+    if save:
+        plt.savefig(out_dir + name_fig + '.jpg')
+        plt.close()
+    else:
+        plt.show()
+

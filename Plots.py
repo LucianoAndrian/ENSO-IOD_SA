@@ -26,7 +26,7 @@ warnings.filterwarnings("ignore")
 
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
-    SelectBins2D, SelectDatesBins, PlotBars, MakeMask
+    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -137,6 +137,16 @@ cbar_pp = colors.ListedColormap(['#003C30', '#004C42', '#0C7169', '#79C8BC',
 cbar_pp.set_under('#3F2404')
 cbar_pp.set_over('#00221A')
 cbar_pp.set_bad(color='white')
+
+cbar_pp_11 = colors.ListedColormap(['#004C42', '#0C7169', '#79C8BC',
+                                 '#B4E2DB',
+                                 'white',
+                                '#F1DFB3', '#DCBC75', '#995D13',
+                                    '#6A3D07'][::-1])
+cbar_pp_11.set_under('#6A3D07')
+cbar_pp_11.set_over('#004C42')
+cbar_pp_11.set_bad(color='white')
+
 
 cbar_ks = colors.ListedColormap(['#C2FAB6', '#FAC78F'])
 
@@ -831,6 +841,8 @@ for v in ['tref', 'prec']:
 
 print('Done CFSv2 PDFs ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
+
+print(' Bins ---------------------------------------------------------------- ')
 bar_n_color = 'indianred'
 bar_n_error_color = 'indianred'
 bar_d_color = 'forestgreen'
@@ -855,25 +867,31 @@ box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
 box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
 
 for v in ['tref', 'prec']:
-
+    print(v)
     if v == 'prec':
         fix = 30
         fix_clim = 0
         ylabel = 'prec anomaly [mm/month]'
         ymin=-80
         ymax=40
+        remove_2011 = False
     else:
         fix = 1
         fix_clim = 273
         ylabel = 'tref anomaly [ºC/month]'
         ymin=-2
         ymax=1
+        remove_2011 = True # parche provisorio, hay algo mal en tref con 2011
 
-    data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}.nc')
+    data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}_detrend.nc')
     data *= fix
     data = data - data.mean(['time', 'r']) # anom
     mask = MakeMask(data, list(data.data_vars)[0]) # mask
     data *= mask
+    if remove_2011:
+        print('PARCHE, arreglar!')
+        print('Removing 2011 data from data')
+        data = data.sel(time=data.time.dt.year != 2011)
 
     bins_dmi = SelectBins2D(serie=data_dmi,
                           bins_limits=bins_limits)
@@ -897,4 +915,110 @@ for v in ['tref', 'prec']:
                  ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
                  bar_n_color=bar_n_color, bar_n_error_color=bar_n_error_color,
                  bar_d_color=bar_d_color, bar_d_error_color=bar_d_error_color)
-print(' Bins ---------------------------------------------------------------- ')
+
+
+print(' Done Bins ----------------------------------------------------------- ')
+print(' --------------------------------------------------------------------- ')
+
+
+print(' Bins 2D ------------------------------------------------------------- ')
+"""
+La funcion admite cualquier combinacion de bin_limits, como la de abajo
+sin embargo, para funcionar igual que los mapas es necesario dar el orden correcto
+para ordenarlos en la matriz. Por lo tanto seria necesario ademas definir
+un cases_magnitude o equivalente para lograr eso. Sino grafica todo desordenado
+
+Esto es para evitar hacer otra BinsByCases que haga casi lo mismo y luego
+tener que estar aprendiendo que hace cada cosa otra vez. De esta manera todo
+funciona igual, mapas y cuadraditos.
+"""
+# Limitesde cada "bin"
+# bin_limits = [[-4.5, -3.5], [-3.5, -2.5], [-2.5,-1.5],
+#               [-1.5, -0.5], [-0.5, 0.5], [0.5, 1.5],
+#               [1.5, 2.5], [2.5, 3.5], [3.5, 4.5]]
+#
+# # limites que se van a usar en cada caso.
+# # en un determinado rango de valores. ej. los dmi_puros_positivos, son dmi > 0.5 con -0.5>n34<0.5
+#
+# bins_by_cases_dmi = [[5,6,7,8], [0,1,2,3],
+#                      [4], [4],
+#                      [5,6,7,8], [0, 1, 2, 3],
+#                      [0, 1, 2, 3],[5,6,7,8],
+#                      [4]]
+#
+# bins_by_cases_n34 = [[4], [4],
+#                      [5,6,7,8], [0,1,2,3],
+#                      [5,6,7,8], [0, 1, 2, 3],
+#                      [5,6,7,8], [0, 1, 2, 3],
+#                      [4]]
+
+print('Plot ----------------------------------------------------------------- ')
+box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
+box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
+box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
+
+for v in ['prec', 'tref']:
+
+    if v == 'prec':
+        fix = 30
+        fix_clim = 0
+    else:
+        fix = 1
+        fix_clim = 273
+
+    for bt, bl, bn in zip(box_lats, box_lons, box_name):
+        aux_comps = {}
+        aux_num_comps = {}
+        n_count = 0
+
+
+        for c_count, c in enumerate(cases):
+            print(
+                'comp --------------------------------------------------------- ')
+            cases_bin, num_bin, auxx = BinsByCases(
+                v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
+                c_count=c_count,
+                bin_limits=bin_limits,
+                bins_by_cases_dmi=bins_by_cases_dmi,
+                bins_by_cases_n34=bins_by_cases_n34,
+                snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
+                neutro_clim=True, box=True, box_lat=bt, box_lon=bl)
+
+            bins_aux_dmi = bins_by_cases_dmi[c_count]
+            bins_aux_n34 = bins_by_cases_n34[c_count]
+
+            for b_dmi in range(0, len(bins_aux_dmi)):
+                for b_n34 in range(0, len(bins_aux_n34)):
+                    aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
+                    aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
+                    # aux_comps[str(n_count)] = cases_bin[b_dmi][b_n34]
+                    # aux_num_comps[str(n_count)] = num_bin[b_dmi][b_n34]
+                    n_count += 1
+
+        aux_num = []
+        cases_ordenados = []
+        num_ordenados = []
+        for c in cases_magnitude:
+            try:
+                aux = aux_comps[c]
+                aux_num.append(aux_num_comps[c])
+            except:
+                aux = aux_comps[cases_magnitude[2]] * 0
+                aux_num.append(np.nan)
+
+            da = xr.DataArray(aux, name="var")
+            cases_ordenados.append(da)
+
+        cases_ordenados = np.array(cases_ordenados).\
+            reshape(len(bin_limits), len(bin_limits))
+        num_ordenados = np.array(aux_num).\
+            reshape(len(bin_limits), len(bin_limits))
+
+        PlotBins2D(cases_ordenados, num_ordenados, vmin=-15, vmax=15,
+                   levels=np.linspace(-15, 15, 13), cmap='BrBG',
+                   color_thr=8,
+                   title='', save=False, name_fig='fig', out_dir='~/', dpi=100,
+                   bin_limits=bin_limits)
+
+# CONTINUAR y EMPROLIJAR!
+################################################################################
