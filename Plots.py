@@ -932,39 +932,119 @@ Esto es para evitar hacer otra BinsByCases que haga casi lo mismo y luego
 tener que estar aprendiendo que hace cada cosa otra vez. De esta manera todo
 funciona igual, mapas y cuadraditos.
 """
-# Limitesde cada "bin"
-# bin_limits = [[-4.5, -3.5], [-3.5, -2.5], [-2.5,-1.5],
-#               [-1.5, -0.5], [-0.5, 0.5], [0.5, 1.5],
-#               [1.5, 2.5], [2.5, 3.5], [3.5, 4.5]]
-#
-# # limites que se van a usar en cada caso.
-# # en un determinado rango de valores. ej. los dmi_puros_positivos, son dmi > 0.5 con -0.5>n34<0.5
-#
-# bins_by_cases_dmi = [[5,6,7,8], [0,1,2,3],
-#                      [4], [4],
-#                      [5,6,7,8], [0, 1, 2, 3],
-#                      [0, 1, 2, 3],[5,6,7,8],
-#                      [4]]
-#
-# bins_by_cases_n34 = [[4], [4],
-#                      [5,6,7,8], [0,1,2,3],
-#                      [5,6,7,8], [0, 1, 2, 3],
-#                      [5,6,7,8], [0, 1, 2, 3],
-#                      [4]]
+
+# CREAR FUNCION PARA ESTA PRIMERA PARTE
+
+
+cases = ['dmi_puros_pos', 'dmi_puros_neg',
+        'n34_puros_pos', 'n34_puros_neg',
+        'sim_pos', 'sim_neg',
+        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+        'neutros']
+
+cases_magnitude = ['ss_en-ss_iodn', 'ss_en-s_iodn', 'ss_en-m_iodn', 'ss_en', 'ss_en-m_iodp', 'ss_en-s_iodp', 'ss_en-ss_iodp',
+                   's_en-ss_iodn', 's_en-s_iodn', 's_en-m_iodn','s_en', 's_en-m_iodp', 's_en-s_iodp', 's_en-ss_iodp',
+                   'm_en-ss_iodn', 'm_en-s_iodn', 'm_en-m_iodn', 'm_en', 'm_en-m_iodp', 'm_en-s_iodp', 'm_en-ss_iodp',
+                   'ss_iodn', 's_iodn', 'm_iodn', 'clim', 'm_iodp', 's_iodp', 'ss_iodp',
+                   'm_ln-ss_iodn', 'm_ln-s_iodn', 'm_ln-m_iodn', 'm_ln', 'm_ln-m_iodp', 'm_ln-s_iodp', 'm_ln-ss_iodp',
+                   's_ln-ss_iodn', 's_ln-s_iodn', 's_ln-m_iodn', 's_ln', 's_ln-m_iodp', 's_ln-s_iodp', 's_ln-ss_iodp',
+                   'ss_ln-ss_iodn', 'ss_ln-s_iodn', 'ss_ln-m_iodn', 'ss_ln', 'ss_ln-m_iodp', 'ss_ln-s_iodp', 'ss_ln-ss_iodp']
+
+bin_limits = [[-4.5,-2],#0 ss
+              [-2,-1], #1 s
+              [-1, -0.5], #2 m
+              [-0.5, 0.5], #3
+              [0.5, 1], #4  m
+              [1, 2], # 5 s
+              [2, 4.5] ] #6 ss
+
+bin_names = ['ss', 's', 'm', '', 'm', 's', 'ss']
+cases = ['dmi_puros_pos', 'dmi_puros_neg',
+        'n34_puros_pos', 'n34_puros_neg',
+        'sim_pos', 'sim_neg',
+        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+        'neutros']
+
+bins_by_cases_dmi = [[4,5, 6],
+                     [0, 1,2],
+                     [3],
+                     [3],
+                     [4,5, 6],
+                     [0, 1,2],
+                     [0, 1,2],
+                     [4, 5, 6],
+                     [2]]
+
+bins_by_cases_n34 = [[3],
+                     [3],
+                     [4,5,6],
+                     [0,1,2],
+                     [4, 5, 6],
+                     [0, 1, 2],
+                     [4, 5, 6],
+                     [0, 1, 2],
+                     [2]]
+
+cases_names = []
+for c_count, c  in enumerate(cases):
+    aux_h = '-'
+    for d in bins_by_cases_dmi[c_count]:
+        d_aux = sum(bin_limits[d])
+        d_aux_mag_name = bin_names[d]
+        d_aux_h = '_'
+        if d_aux>0:
+            d_aux_name = 'iodp'
+        elif d_aux<0:
+            d_aux_name = 'iodn'
+        elif d_aux==0:
+            d_aux_name = ''
+            d_aux_mag_name = ''
+            d_aux_h = ''
+            aux_h = ''
+
+        iod_name = f"{d_aux_mag_name}{d_aux_h}{d_aux_name}"
+
+        for n in bins_by_cases_n34[c_count]:
+            n_aux = sum(bin_limits[n])
+            n_aux_mag_name = bin_names[n]
+            n_aux_h = '_'
+
+            if n_aux > 0:
+                n_aux_name = 'en'
+            elif n_aux < 0:
+                n_aux_name = 'ln'
+            elif n_aux == 0:
+                n_aux_name = ''
+                n_aux_mag_name=''
+                n_aux_h = ''
+                aux_h = ''
+
+            enso_name = f"{n_aux_mag_name}{n_aux_h}{n_aux_name}"
+            case_name = f"{enso_name}{aux_h}{iod_name}"
+            cases_names.append(case_name)
+
 
 print('Plot ----------------------------------------------------------------- ')
 box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
 box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
 box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
 
-for v in ['prec', 'tref']:
+
+for v, v_scale, v_cbar in zip(['prec', 'tref'],
+                           [np.linspace(-15, 15, 13),
+                            np.linspace(-1, 1, 13)],
+                           ['BrBG', 'RdBu_r']):
 
     if v == 'prec':
         fix = 30
         fix_clim = 0
+        color_thr = 8
+        units = '[mm/month]'
     else:
         fix = 1
         fix_clim = 273
+        color_thr = 1
+        units = '[ºC]'
 
     for bt, bl, bn in zip(box_lats, box_lons, box_name):
         aux_comps = {}
@@ -1003,7 +1083,7 @@ for v in ['prec', 'tref']:
                 aux = aux_comps[c]
                 aux_num.append(aux_num_comps[c])
             except:
-                aux = aux_comps[cases_magnitude[2]] * 0
+                aux = aux_comps[cases_magnitude[4]] * 0
                 aux_num.append(np.nan)
 
             da = xr.DataArray(aux, name="var")
@@ -1014,11 +1094,16 @@ for v in ['prec', 'tref']:
         num_ordenados = np.array(aux_num).\
             reshape(len(bin_limits), len(bin_limits))
 
-        PlotBins2D(cases_ordenados, num_ordenados, vmin=-15, vmax=15,
-                   levels=np.linspace(-15, 15, 13), cmap='BrBG',
-                   color_thr=8,
-                   title='', save=False, name_fig='fig', out_dir='~/', dpi=100,
+        PlotBins2D(cases_ordenados, num_ordenados,
+                   vmin=min(v_scale), vmax=max(v_scale),
+                   levels=v_scale, cmap=v_cbar,
+                   color_thr=color_thr,
+                   title=f'{v} {units} - {bn}',
+                   save=save, name_fig=f'{v}_bins2d_{bn}',
+                   out_dir=out_dir, dpi=dpi,
                    bin_limits=bin_limits)
 
 # CONTINUAR y EMPROLIJAR! hay que correr cases_names!
 ################################################################################
+
+

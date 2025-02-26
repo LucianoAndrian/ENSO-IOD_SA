@@ -4267,11 +4267,10 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
         plt.show()
 
 ################################################################################
-
-
-def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap, color_thr,
-               title, save=False, name_fig='fig', out_dir='~/', dpi=100,
-               bin_limits=None):
+# Bins 2D
+def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
+               color_thr, title, save=False, name_fig='fig', out_dir='~/',
+               dpi=100, bin_limits=None):
 
     cases_ordenados = np.flip(cases_ordenados)
     num_ordenados = np.flip(num_ordenados)
@@ -4286,7 +4285,7 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap, color_t
                 color_num = 'white'
             else:
                 color_num = 'k'
-            if ~np.isnan(num_ordenados[i, j]):
+            if (~np.isnan(num_ordenados[i, j])) and (num_ordenados[i, j]!=0):
                 ax.text(j, i, num_ordenados[i, j].astype(np.int64),
                         ha='center', va='center', color=color_num)
 
@@ -4319,8 +4318,8 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap, color_t
                  boundaries=levels)
     plt.tight_layout()
     if save:
-        plt.savefig(out_dir + name_fig + '.jpg')
+        plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
         plt.close()
     else:
         plt.show()
-
+################################################################################
