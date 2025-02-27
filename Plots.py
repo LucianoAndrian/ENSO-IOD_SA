@@ -1,10 +1,8 @@
 """
 Figuras ENSO-IOD-SA
 """
-from fontTools.varLib.varStore import VarStore_subset_varidxes
-
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 # ---------------------------------------------------------------------------- #
 import os
@@ -26,7 +24,7 @@ warnings.filterwarnings("ignore")
 
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
-    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D
+    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, SetBinsByCases
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -257,8 +255,8 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
                                enso_cfsv2_dif, iod_cfsv2_dif)
 
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
-              titles=['', '', '', '', '', ''], namefig=f'val_{v}', map='sa',
-              save=save, dpi=dpi, out_dir=out_dir,
+              titles=['', '', '', '', '', ''], namefig=f'validation_{v}',
+              map='sa', save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=None, levels_ctn=v_scale, color_ctn='k',
               data_ctn2=None, levels_ctn2=None,
               color_ctn2=None, high=3, width=7, num_cols=3, pdf=True,
@@ -394,7 +392,7 @@ for v_count, (v, v_scale, v_cbar) in enumerate(
         aux_hgt_sig = xr.concat(aux_hgt_sig, dim='plots')
 
         PlotFinal(data=aux_var_no_sig, levels=v_scale, cmap=v_cbar,
-                  titles=title_case, namefig=f'val_{v}', map='sa',
+                  titles=title_case, namefig=f'comp_obs_{v}', map='sa',
                   save=save, dpi=dpi, out_dir=out_dir,
                   data_ctn=None, levels_ctn=v_scale, color_ctn='k',
                   data_ctn2=aux_hgt_no_sig, levels_ctn2=v_hgt_scale,
@@ -403,7 +401,7 @@ for v_count, (v, v_scale, v_cbar) in enumerate(
                   data_ctn2_no_ocean_mask=True)
 
         PlotFinal(data=aux_hgt_no_sig, levels=v_hgt_scale, cmap=v_hgt_cbar,
-                  titles=title_case, namefig=f'val_{v}', map='sa',
+                  titles=title_case, namefig=f'comp_obs_solo_{v_hgt}', map='sa',
                   save=save, dpi=dpi, out_dir=out_dir,
                   data_ctn=aux_hgt_no_sig, levels_ctn=v_hgt_scale, color_ctn='k',
                   data_ctn2=None, levels_ctn2=None,
@@ -413,8 +411,8 @@ for v_count, (v, v_scale, v_cbar) in enumerate(
 print('Done Obs. Composite -------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
 print('                                                                       ')
-# ---------------------------------------------------------------------------- #
 
+# ---------------------------------------------------------------------------- #
 print('# CFSv2 Composite --------------------------------------------------- #')
 variables = ['tref', 'prec']
 aux_scales = [scale_t, scale_pp]
@@ -487,7 +485,7 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
 
     aux_scale_hgt=[-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
     PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
-              titles=title_case, namefig=f"f10", map='sa',
+              titles=title_case, namefig=f"comp_cfsv2_{v}", map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=aux_hgt, color_ctn='k',
               high=3, width=7, num_cols=3,
@@ -496,7 +494,7 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
               data_ctn_no_ocean_mask=True)
 
     PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
-              titles=title_case, namefig=f"f10", map='sa',
+              titles=title_case, namefig=f"comp_snr_cfsv2_{v}", map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=aux_hgt, color_ctn='k',
               high=3, width=7, num_cols=3,
@@ -508,7 +506,7 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
         # scale_hgt=[-150, -100, -50, -25, -10,
         # 10, 25, 50, 100, 150]
         PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
-                  titles=title_case, namefig=f"f10", map='sa',
+                  titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
                   save=save, dpi=dpi, out_dir=out_dir,
                   data_ctn=aux_hgt, color_ctn='k',
                   high=3, width=7, num_cols=3,
@@ -516,7 +514,7 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
                   levels_ctn=scale_hgt, ocean_mask=False)
 
         PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
-                  titles=title_case, namefig=f"f10", map='sa',
+                  titles=title_case, namefig=f"comp_snr_cfsv2_hgt_{v}", map='sa',
                   save=save, dpi=dpi, out_dir=out_dir,
                   data_ctn=aux_hgt_snr, color_ctn='k',
                   high=3, width=7, num_cols=3,
@@ -526,12 +524,13 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
 print('Done CFSv2 Composite ------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
 
+# ---------------------------------------------------------------------------- #
 print('# CFSv2 Composite by magnitude -------------------------------------- #')
 print('Set -----------------------------------------------------------------')
 cases = ['dmi_puros_pos', 'dmi_puros_neg',
         'n34_puros_pos', 'n34_puros_neg',
         'sim_pos', 'sim_neg',
-        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+        #'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
         'neutros']
 
 row_titles = [None, None, 'Strong EN', None, None, None,
@@ -544,11 +543,6 @@ col_titles = [None, None, 'Neutro IOD', 'Moderate IOD+',
               'Strong IOD-', 'Moderate IOD-']
 
 # Orden de ploteo ------------------------------------------------------------ #
-cases_magnitude = [None, None, 's_en', 's_en-m_iodp', 's_en-s_iodp',
-                   None, None, 'm_en', 'm_en-m_iodp', 'm_en-s_iodp',
-                   's_iodn', 'm_iodn', 'clim', 'm_iodp', 's_iodp',
-                   'm_ln-s_iodn', 'm_ln-m_iodn', 'm_ln', None, None,
-                   's_ln-s_iodn', 's_ln-m_iodn', 's_ln', None, None]
 
 bin_limits = [[-4.5,-1], #0 s
               [-1, -0.5], #1 m
@@ -556,62 +550,10 @@ bin_limits = [[-4.5,-1], #0 s
               [0.5, 1], #3  m
               [1, 4.5]] #4 s
 
-bins_by_cases_dmi = [[3, 4], [0, 1],
-                     [2], [2],
-                     [3, 4], [0, 1],
-                     [0, 1],[3, 4],
-                     [2]]
-
-bins_by_cases_n34 = [[2], [2],
-                     [3, 4], [0,1],
-                     [3, 4], [0, 1],
-                     [3, 4], [0, 1],
-                     [2]]
-
-
-# Descubriendo el orden de computo original ---------------------------------- #
-# Si, muy pracito...
-# y asignando un nombre para poder usar cases_magnitud definido arriba
-bin_names = ['s', 'm', '', 'm', 's']
-cases_names = []
-for c_count, c  in enumerate(cases):
-    aux_h = '-'
-    for d in bins_by_cases_dmi[c_count]:
-        d_aux = sum(bin_limits[d])
-        d_aux_mag_name = bin_names[d]
-        d_aux_h = '_'
-        if d_aux>0:
-            d_aux_name = 'iodp'
-        elif d_aux<0:
-            d_aux_name = 'iodn'
-        elif d_aux==0:
-            d_aux_name = ''
-            d_aux_mag_name = ''
-            d_aux_h = ''
-            aux_h = ''
-
-        iod_name = f"{d_aux_mag_name}{d_aux_h}{d_aux_name}"
-
-        for n in bins_by_cases_n34[c_count]:
-            n_aux = sum(bin_limits[n])
-            n_aux_mag_name = bin_names[n]
-            n_aux_h = '_'
-
-            if n_aux > 0:
-                n_aux_name = 'en'
-            elif n_aux < 0:
-                n_aux_name = 'ln'
-            elif n_aux == 0:
-                n_aux_name = ''
-                n_aux_mag_name=''
-                n_aux_h = ''
-                aux_h = ''
-
-            enso_name = f"{n_aux_mag_name}{n_aux_h}{n_aux_name}"
-            case_name = f"{enso_name}{aux_h}{iod_name}"
-            cases_names.append(case_name)
-
-
+indices = ['n34', 'dmi']
+magnitudes = ['s', 'm']
+cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
+    SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 variables = ['tref', 'prec']
 aux_scales = [scale_t_comp, scale_pp_comp]
@@ -659,8 +601,8 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         bins_aux_dmi = bins_by_cases_dmi[c_count]
         bins_aux_n34 = bins_by_cases_n34[c_count]
 
-        for b_dmi in range(0, len(bins_aux_dmi)):
-            for b_n34 in range(0, len(bins_aux_n34)):
+        for b_n34 in range(0, len(bins_aux_n34)):
+            for b_dmi in range(0, len(bins_aux_dmi)):
                 aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
                 aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
                 n_count += 1
@@ -677,10 +619,12 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         bins_aux_dmi_snr = bins_by_cases_dmi[c_count]
         bins_aux_n34_snr = bins_by_cases_n34[c_count]
 
-        for b_dmi in range(0, len(bins_aux_dmi_snr)):
-            for b_n34 in range(0, len(bins_aux_n34_snr)):
-                aux_comps_snr[cases_names[n_count_snr]] = cases_bin_snr[b_dmi][b_n34]
-                aux_num_comps_snr[cases_names[n_count_snr]] = num_bin_snr[b_dmi][b_n34]
+        for b_n34 in range(0, len(bins_aux_n34_snr)):
+            for b_dmi in range(0, len(bins_aux_dmi_snr)):
+                aux_comps_snr[cases_names[n_count_snr]] = \
+                    cases_bin_snr[b_dmi][b_n34]
+                aux_num_comps_snr[cases_names[n_count_snr]] = \
+                    num_bin_snr[b_dmi][b_n34]
                 n_count_snr += 1
 
         print('hgt ---------------------------------------------------------- ')
@@ -696,10 +640,12 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         bins_aux_dmi_hgt = bins_by_cases_dmi[c_count]
         bins_aux_n34_hgt = bins_by_cases_n34[c_count]
 
-        for b_dmi in range(0, len(bins_aux_dmi_hgt)):
-            for b_n34 in range(0, len(bins_aux_n34_hgt)):
-                aux_comps_hgt[cases_names[n_count_hgt]] = cases_bin_hgt[b_dmi][b_n34]
-                aux_num_comps_hgt[cases_names[n_count_hgt]] = num_bin_hgt[b_dmi][b_n34]
+        for b_n34 in range(0, len(bins_aux_n34_hgt)):
+            for b_dmi in range(0, len(bins_aux_dmi_hgt)):
+                aux_comps_hgt[cases_names[n_count_hgt]] = \
+                    cases_bin_hgt[b_dmi][b_n34]
+                aux_num_comps_hgt[cases_names[n_count_hgt]] = \
+                    num_bin_hgt[b_dmi][b_n34]
                 n_count_hgt += 1
 
     # Clim ------------------------------------------------------------------- #
@@ -792,10 +738,10 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     # SNR plot
     PlotFinal_CompositeByMagnitude(data=cases_ordenados_snr, levels=scale_snr,
                                    cmap=v_cbar_snr, titles=aux_num,
-                                   namefig=f'{v}_cfsv2_comp_by_magnitude',
+                                   namefig=f'snr_{v}_cfsv2_comp_by_magnitude',
                                    map='sa', save=save, dpi=dpi,
                                    out_dir=out_dir,
-                                   data_ctn=cases_ordenados_hgt,
+                                   data_ctn=None,
                                    levels_ctn = np.linspace(-150,150,13),
                                    color_ctn='k', row_titles=row_titles,
                                    col_titles=col_titles, clim_plot=clim,
@@ -812,6 +758,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 print('Done CFSv2 Composite by magnitude ------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 
+# ---------------------------------------------------------------------------- #
 print(' PDFs CFSv2 ---------------------------------------------------------- ')
 box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
 box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
@@ -916,25 +863,11 @@ for v in ['tref', 'prec']:
                  bar_n_color=bar_n_color, bar_n_error_color=bar_n_error_color,
                  bar_d_color=bar_d_color, bar_d_error_color=bar_d_error_color)
 
-
 print(' Done Bins ----------------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
 
-
+# ---------------------------------------------------------------------------- #
 print(' Bins 2D ------------------------------------------------------------- ')
-"""
-La funcion admite cualquier combinacion de bin_limits, como la de abajo
-sin embargo, para funcionar igual que los mapas es necesario dar el orden correcto
-para ordenarlos en la matriz. Por lo tanto seria necesario ademas definir
-un cases_magnitude o equivalente para lograr eso. Sino grafica todo desordenado
-
-Esto es para evitar hacer otra BinsByCases que haga casi lo mismo y luego
-tener que estar aprendiendo que hace cada cosa otra vez. De esta manera todo
-funciona igual, mapas y cuadraditos.
-"""
-
-# CREAR FUNCION PARA ESTA PRIMERA PARTE
-
 
 cases = ['dmi_puros_pos', 'dmi_puros_neg',
         'n34_puros_pos', 'n34_puros_neg',
@@ -942,93 +875,23 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg',
         'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
         'neutros']
 
-cases_magnitude = ['ss_en-ss_iodn', 'ss_en-s_iodn', 'ss_en-m_iodn', 'ss_en', 'ss_en-m_iodp', 'ss_en-s_iodp', 'ss_en-ss_iodp',
-                   's_en-ss_iodn', 's_en-s_iodn', 's_en-m_iodn','s_en', 's_en-m_iodp', 's_en-s_iodp', 's_en-ss_iodp',
-                   'm_en-ss_iodn', 'm_en-s_iodn', 'm_en-m_iodn', 'm_en', 'm_en-m_iodp', 'm_en-s_iodp', 'm_en-ss_iodp',
-                   'ss_iodn', 's_iodn', 'm_iodn', 'clim', 'm_iodp', 's_iodp', 'ss_iodp',
-                   'm_ln-ss_iodn', 'm_ln-s_iodn', 'm_ln-m_iodn', 'm_ln', 'm_ln-m_iodp', 'm_ln-s_iodp', 'm_ln-ss_iodp',
-                   's_ln-ss_iodn', 's_ln-s_iodn', 's_ln-m_iodn', 's_ln', 's_ln-m_iodp', 's_ln-s_iodp', 's_ln-ss_iodp',
-                   'ss_ln-ss_iodn', 'ss_ln-s_iodn', 'ss_ln-m_iodn', 'ss_ln', 'ss_ln-m_iodp', 'ss_ln-s_iodp', 'ss_ln-ss_iodp']
+indices = ['n34', 'dmi']
+magnitudes = ['ss', 's', 'm']
+bin_limits = [[-4.5, -2],  # 0 ss
+              [-2, -1],  # 1 s
+              [-1, -0.5],  # 2 m
+              [-0.5, 0.5],  # 3
+              [0.5, 1],  # 4  m
+              [1, 2],  # 5 s
+              [2, 4.5]]  # 6 ss
 
-bin_limits = [[-4.5,-2],#0 ss
-              [-2,-1], #1 s
-              [-1, -0.5], #2 m
-              [-0.5, 0.5], #3
-              [0.5, 1], #4  m
-              [1, 2], # 5 s
-              [2, 4.5] ] #6 ss
-
-bin_names = ['ss', 's', 'm', '', 'm', 's', 'ss']
-cases = ['dmi_puros_pos', 'dmi_puros_neg',
-        'n34_puros_pos', 'n34_puros_neg',
-        'sim_pos', 'sim_neg',
-        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
-        'neutros']
-
-bins_by_cases_dmi = [[4,5, 6],
-                     [0, 1,2],
-                     [3],
-                     [3],
-                     [4,5, 6],
-                     [0, 1,2],
-                     [0, 1,2],
-                     [4, 5, 6],
-                     [2]]
-
-bins_by_cases_n34 = [[3],
-                     [3],
-                     [4,5,6],
-                     [0,1,2],
-                     [4, 5, 6],
-                     [0, 1, 2],
-                     [4, 5, 6],
-                     [0, 1, 2],
-                     [2]]
-
-cases_names = []
-for c_count, c  in enumerate(cases):
-    aux_h = '-'
-    for d in bins_by_cases_dmi[c_count]:
-        d_aux = sum(bin_limits[d])
-        d_aux_mag_name = bin_names[d]
-        d_aux_h = '_'
-        if d_aux>0:
-            d_aux_name = 'iodp'
-        elif d_aux<0:
-            d_aux_name = 'iodn'
-        elif d_aux==0:
-            d_aux_name = ''
-            d_aux_mag_name = ''
-            d_aux_h = ''
-            aux_h = ''
-
-        iod_name = f"{d_aux_mag_name}{d_aux_h}{d_aux_name}"
-
-        for n in bins_by_cases_n34[c_count]:
-            n_aux = sum(bin_limits[n])
-            n_aux_mag_name = bin_names[n]
-            n_aux_h = '_'
-
-            if n_aux > 0:
-                n_aux_name = 'en'
-            elif n_aux < 0:
-                n_aux_name = 'ln'
-            elif n_aux == 0:
-                n_aux_name = ''
-                n_aux_mag_name=''
-                n_aux_h = ''
-                aux_h = ''
-
-            enso_name = f"{n_aux_mag_name}{n_aux_h}{n_aux_name}"
-            case_name = f"{enso_name}{aux_h}{iod_name}"
-            cases_names.append(case_name)
-
+cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
+    SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 print('Plot ----------------------------------------------------------------- ')
 box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
 box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
 box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
-
 
 for v, v_scale, v_cbar in zip(['prec', 'tref'],
                            [np.linspace(-15, 15, 13),
@@ -1051,10 +914,8 @@ for v, v_scale, v_cbar in zip(['prec', 'tref'],
         aux_num_comps = {}
         n_count = 0
 
-
         for c_count, c in enumerate(cases):
-            print(
-                'comp --------------------------------------------------------- ')
+            print('comp ----------------------------------------------------- ')
             cases_bin, num_bin, auxx = BinsByCases(
                 v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
                 c_count=c_count,
@@ -1067,12 +928,10 @@ for v, v_scale, v_cbar in zip(['prec', 'tref'],
             bins_aux_dmi = bins_by_cases_dmi[c_count]
             bins_aux_n34 = bins_by_cases_n34[c_count]
 
-            for b_dmi in range(0, len(bins_aux_dmi)):
-                for b_n34 in range(0, len(bins_aux_n34)):
+            for b_n34 in range(0, len(bins_aux_n34)):
+                for b_dmi in range(0, len(bins_aux_dmi)):
                     aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
                     aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
-                    # aux_comps[str(n_count)] = cases_bin[b_dmi][b_n34]
-                    # aux_num_comps[str(n_count)] = num_bin[b_dmi][b_n34]
                     n_count += 1
 
         aux_num = []
@@ -1102,8 +961,7 @@ for v, v_scale, v_cbar in zip(['prec', 'tref'],
                    save=save, name_fig=f'{v}_bins2d_{bn}',
                    out_dir=out_dir, dpi=dpi,
                    bin_limits=bin_limits)
+print(' Done Bins 2D -------------------------------------------------------- ')
+print(' --------------------------------------------------------------------- ')
 
-# CONTINUAR y EMPROLIJAR! hay que correr cases_names!
 ################################################################################
-
-
