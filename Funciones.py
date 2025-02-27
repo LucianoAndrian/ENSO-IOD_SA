@@ -3473,7 +3473,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     pass
                 aux_ctn = data_ctn.sel(plots=plot)
 
-                if aux_ctn.mean().values != 0:
+                if ((aux_ctn.mean().values != 0) and
+                        (~np.isnan(aux_ctn.mean().values))):
 
                     ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
                                            f"$N={titles[plot]}$",
@@ -3504,7 +3505,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             except:
                 aux_var = aux.values
 
-            if aux.mean().values != 0:
+            if ((aux.mean().values != 0) and
+                    (~np.isnan(aux.mean().values))):
 
                 if ocean_mask is True:
                     mask_ocean = MakeMask(aux)
@@ -4322,4 +4324,138 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
         plt.close()
     else:
         plt.show()
+
 ################################################################################
+def SetBinsByCases(indices, magnitudes, bin_limits, cases):
+
+    import numpy as np
+
+    mt_dim = (len(magnitudes) * 2 + 1)
+
+    matriz_base = np.full((mt_dim, mt_dim), None, dtype=object)
+
+    columna_fila_centro = {}
+    for i, u in zip(indices, ['columna_centro', 'fila_centro']):
+        aux_names = []
+
+        for signo in ['n', 'p']:
+            if signo == 'p':
+                aux_magnitudes = magnitudes[::-1]
+            else:
+                aux_magnitudes = magnitudes
+
+            for m in aux_magnitudes:
+                aux_names.append(f'{m}_{i}{signo}')
+            if signo == 'n':
+                aux_names.append('clim')
+
+        columna_fila_centro[u] = aux_names
+
+    matriz_base[:, mt_dim // 2] = columna_fila_centro['columna_centro'][::-1]
+    matriz_base[mt_dim // 2, :] = columna_fila_centro['fila_centro']
+
+    # combinaciones
+    for i in range(mt_dim):
+        if i != mt_dim // 2:
+            for j in range(mt_dim):
+                if j != mt_dim // 2:
+                    matriz_base[i, j] = \
+                        (f'{matriz_base[:, mt_dim // 2][i]}-'
+                         f'{matriz_base[mt_dim // 2, :][j]}')
+
+    cases_magnitude = matriz_base.flatten().tolist()
+
+    # listo cases_magnitude
+
+    bins_limits_pos = []
+    bins_limits_neg = []
+    bins_limits_neutro = []
+    for bl_count, bl in enumerate(bin_limits):
+        if sum(bl) > 0:
+            bins_limits_pos.append(bl_count)
+        elif sum(bl) < 0:
+            bins_limits_neg.append(bl_count)
+        elif sum(bl) == 0:
+            bins_limits_neutro.append(bl_count)
+
+    bins_by_cases_indice1 = []
+    bins_by_cases_indice2 = []
+    for c in cases:
+        check_pos_neg = True
+
+        if (indices[0] in c) and ('puros' in c):
+            bins_by_cases_indice2.append(bins_limits_neutro)
+        if (indices[1] in c) and ('puros' in c):
+            bins_by_cases_indice1.append(bins_limits_neutro)
+
+        if 'neutros' in c:
+            bins_by_cases_indice1.append(bins_limits_neutro)
+            bins_by_cases_indice2.append(bins_limits_neutro)
+
+        if (f'{indices[0]}_pos' in c) and (f'{indices[1]}_neg' in c):
+            bins_by_cases_indice1.append(bins_limits_pos)
+            bins_by_cases_indice2.append(bins_limits_neg)
+            check_pos_neg = False
+        elif (f'{indices[0]}_neg' in c) and (f'{indices[1]}_pos' in c):
+            bins_by_cases_indice1.append(bins_limits_neg)
+            bins_by_cases_indice2.append(bins_limits_pos)
+            check_pos_neg = False
+
+        if (indices[0] in c) and ('pos' in c) and check_pos_neg:
+            bins_by_cases_indice1.append(bins_limits_pos)
+        elif (indices[0] in c) and ('neg' in c) and check_pos_neg:
+            bins_by_cases_indice1.append(bins_limits_neg)
+
+        if (indices[1] in c) and ('pos' in c) and check_pos_neg:
+            bins_by_cases_indice2.append(bins_limits_pos)
+        elif (indices[1] in c) and ('neg' in c) and check_pos_neg:
+            bins_by_cases_indice2.append(bins_limits_neg)
+
+        if ('sim' in c) and ('pos' in c):
+            bins_by_cases_indice1.append(bins_limits_pos)
+            bins_by_cases_indice2.append(bins_limits_pos)
+        elif ('sim' in c) and ('neg' in c):
+            bins_by_cases_indice1.append(bins_limits_neg)
+            bins_by_cases_indice2.append(bins_limits_neg)
+
+    bin_names = magnitudes + [''] + magnitudes[::-1]
+
+    cases_names = []
+    for c_count, c in enumerate(cases):
+        aux_h = '-'
+        for i1 in bins_by_cases_indice1[c_count]:
+            i1_aux = sum(bin_limits[i1])
+            i1_aux_mag_name = bin_names[i1]
+            i1_aux_h = '_'
+            if i1_aux > 0:
+                i1_aux_name = indices[0] + 'p'
+            elif i1_aux < 0:
+                i1_aux_name = indices[0] + 'n'
+            elif i1_aux == 0:
+                i1_aux_name = ''
+                i1_aux_mag_name = ''
+                i1_aux_h = ''
+                aux_h = ''
+
+            i1_name = f"{i1_aux_mag_name}{i1_aux_h}{i1_aux_name}"
+
+            for i2 in bins_by_cases_indice2[c_count]:
+                i2_aux = sum(bin_limits[i2])
+                i2_aux_mag_name = bin_names[i2]
+                i2_aux_h = '_'
+
+                if i2_aux > 0:
+                    i2_aux_name = indices[1] + 'p'
+                elif i2_aux < 0:
+                    i2_aux_name = indices[1] + 'n'
+                elif i2_aux == 0:
+                    i2_aux_name = ''
+                    i2_aux_mag_name = ''
+                    i2_aux_h = ''
+                    aux_h = ''
+                i2_name = f"{i2_aux_mag_name}{i2_aux_h}{i2_aux_name}"
+                case_name = f"{i1_name}{aux_h}{i2_name}"
+                cases_names.append(case_name)
+
+    return cases_names, cases_magnitude, \
+        bins_by_cases_indice1, bins_by_cases_indice2
