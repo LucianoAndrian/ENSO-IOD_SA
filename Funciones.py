@@ -1,30 +1,37 @@
 """
 Funciones generales para ENSO_IOD
 """
+################################################################################
 from itertools import groupby
 import xarray as xr
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None
 import statsmodels.formula.api as sm
+import statsmodels.formula.api as smf
 import cartopy.feature
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-import cartopy.crs as ccrs
-import regionmask
+
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 from matplotlib.font_manager import FontProperties
 import scipy.stats as st
-
+import string
+from numpy import ma
+from matplotlib import colors
+import matplotlib.pyplot as plt
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+import cartopy.crs as ccrs
+from scipy.signal import convolve2d
 import os
+import matplotlib.patches as mpatches
+
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+import glob
 
 out_dir = '~/'
-
-# Niño3.4 & DMI ########################################################################################################
+################################################################################
+# Niño3.4 & DMI ################################################################
 def MovingBasePeriodAnomaly(data, start=1920, end=2020):
-    import xarray as xr
     # first five years
     start_num = start
     start = str(start)
@@ -61,8 +68,6 @@ def Nino34CPC(data, start=1920, end=2020):
 
     # Calculates the Niño3.4 index using the CPC criteria.
     # Use ERSSTv5 to obtain exactly the same values as those reported.
-
-    #from Funciones import MovingBasePeriodAnomaly
 
     start_year = str(start-14)
     end_year = str(end)
@@ -108,10 +113,6 @@ def Nino34CPC(data, start=1920, end=2020):
     return ninio34_f, n34, n34_df
 
 def DMIndex(iodw, iode, sst_anom_sd=True, xsd=0.5, opposite_signs_criteria=True):
-
-    import numpy as np
-    from itertools import groupby
-    import pandas as pd
 
     limitsize = len(iodw) - 2
 
@@ -528,9 +529,9 @@ def DMI2(end_per=1920, start_per=2020, filter_harmonic=True, filter_bwa=False,
     return dmi_sy_full, dmi_raw, (iodw_f - iode_f)
     ####################################################################################################################
 
-def PlotEnso_Iod(dmi, ninio, title, fig_name = 'fig_enso_iod', out_dir=out_dir, save=False):
-    from numpy import ma
-    import matplotlib.pyplot as plt
+def PlotEnso_Iod(dmi, ninio, title, fig_name = 'fig_enso_iod', out_dir=out_dir,
+                 save=False):
+
     fig, ax = plt.subplots()
     im = plt.scatter(x=dmi, y=ninio, marker='o', s=20, edgecolor='black', color='gray')
 
@@ -590,7 +591,8 @@ def ClassifierEvents(df, full_season=False):
 
     return df_pos, df_neg
 
-def NeutralEvents(df, mmin, mmax, start=1920, end = 2020, double=False, df2=None, var_original=None):
+def NeutralEvents(df, mmin, mmax, start=1920, end = 2020, double=False,
+                  df2=None, var_original=None):
 
     x = np.arange(start, end + 1, 1)
 
@@ -637,13 +639,13 @@ def NeutralEvents(df, mmin, mmax, start=1920, end = 2020, double=False, df2=None
         neutro = neutro.mean(['time'], skipna=True)
 
     return neutro, neutro_years
-########################################################################################################################
-# Varias ###############################################################################################################
+
+################################################################################
+# Varias #######################################################################
 def is_months(month, mmin, mmax):
     return (month >= mmin) & (month <= mmax)
-def WaveFilter(serie, harmonic):
 
-    import numpy as np
+def WaveFilter(serie, harmonic):
 
     sum = 0
     sam = 0
@@ -754,7 +756,8 @@ def Composite(original_data, index_pos, index_neg, mmin, mmax):
 
     return comp_field_pos, comp_field_neg
 
-def MultipleComposite(var, n34, dmi, season,start = 1920, full_season=False, compute_composite=False):
+def MultipleComposite(var, n34, dmi, season,start = 1920, full_season=False,
+                      compute_composite=False):
 
     seasons = ['DJF', 'JFM', 'FMA', 'MAM', 'AMJ', 'MJJ',
                'JJA','JAS', 'ASO', 'SON', 'OND', 'NDJ']
@@ -946,8 +949,8 @@ def CompositeSimple(original_data, index, mmin, mmax):
     else:
         print(' len index = 0')
 
-
-def CaseComp(data, s, mmonth, c, two_variables=False, data2=None, return_neutro_comp=False, nc_date_dir='None'):
+def CaseComp(data, s, mmonth, c, two_variables=False, data2=None,
+             return_neutro_comp=False, nc_date_dir='None'):
     """
     Las fechas se toman del periodo 1920-2020 basados en el DMI y N34 con ERSSTv5
     Cuando se toman los periodos 1920-1949 y 1950_2020 las fechas que no pertencen
@@ -992,7 +995,6 @@ def CaseComp(data, s, mmonth, c, two_variables=False, data2=None, return_neutro_
             return comp, case_num, neutro_comp
         else:
             return comp, case_num
-
 
 def SelectCase(original_data, index, mmin, mmax):
     def is_months(month, mmin, mmax):
@@ -1039,8 +1041,6 @@ def CaseSNR(data, s, mmonth, c, nc_date_dir='None'):
         return snr, case_num
     except:
         print('Error en ' + s + ' ' + c)
-
-
 
 def ChangeLons(data, lon_name='lon'):
     data['_longitude_adjusted'] = xr.where(
@@ -1280,7 +1280,6 @@ def OpenDatasets(name, interp=False):
         pp_lieb = xrFieldTimeDetrend(pp_lieb, 'time')
         return pp_lieb
 
-
 def fix_calendar(ds, timevar='time'):
     """
     agrega los dias a los archivos nc de NMME
@@ -1289,8 +1288,8 @@ def fix_calendar(ds, timevar='time'):
         ds[timevar].attrs['calendar'] = '360_day'
     return ds
 
-########################################################################################################################
-# WAF ##################################################################################################################
+################################################################################
+# WAF ##########################################################################
 def c_diff(arr, h, dim, cyclic=False):
     # compute derivate of array variable respect to h associated to dim
     # adapted from kuchaale script
@@ -1371,20 +1370,16 @@ def WAF(psiclm, psiaa, lon, lat,reshape=True, variable='var', hpalevel=200):
 def PlotWAFCountours(comp, comp_var, title='Fig', name_fig='Fig',
                      save=False, dpi=200, levels=np.linspace(-1.5, 1.5, 13),
                      contour=False, cmap='RdBu_r', number_events='',
-                     waf=False, px=None, py=None, text=True, waf_scale=None, waf_units=None,
-                     two_variables = False, comp2=None, step=1,step_waf=12,
-                     levels2=np.linspace(-1.5, 1.5, 13), contour0=False, color_map='#4B4B4B',
-                     color_arrow='#400004'):
-
-    from numpy import ma
-    import matplotlib.pyplot as plt
+                     waf=False, px=None, py=None, text=True, waf_scale=None,
+                     waf_units=None, two_variables = False, comp2=None, step=1,
+                     step_waf=12, levels2=np.linspace(-1.5, 1.5, 13),
+                     contour0=False, color_map='#4B4B4B', color_arrow='#400004'):
 
     fig = plt.figure(figsize=(9, 3.5), dpi=dpi)
 
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
     crs_latlon = ccrs.PlateCarree()
     ax.set_extent([0, 359, -80, 20], crs=crs_latlon)
-
 
     im = ax.contourf(comp.lon[::step], comp.lat[::step], comp_var[::step,::step],
                      levels=levels,transform=crs_latlon, cmap=cmap, extend='both')
@@ -1451,15 +1446,15 @@ def PlotWAFCountours(comp, comp_var, title='Fig', name_fig='Fig',
         plt.close()
     else:
         plt.show()
-########################################################################################################################
-# Regression ###########################################################################################################
+
+################################################################################
+# Regression ###################################################################
 def LinearReg(xrda, dim, deg=1):
     # liner reg along a single dimension
     aux = xrda.polyfit(dim=dim, deg=deg, skipna=True)
     return aux
 
 def LinearReg1_D(dmi, n34):
-    import statsmodels.formula.api as smf
 
     df = pd.DataFrame({'dmi': dmi.values, 'n34': n34.values})
 
@@ -1614,15 +1609,15 @@ def Corr(datos, index, time_original, m=9):
 
     return xr.corr(aux_corr1, aux_corr2, 'time')
 
-def PlotReg(data, data_cor, levels=np.linspace(-100,100,2), cmap='RdBu_r'
-            , dpi=100, save=False, title='\m/', name_fig='fig_PlotReg', sig=True, out_dir=''
-            ,two_variables = False, data2=None, data_cor2=None, levels2 = np.linspace(-100,100,2)
-            , sig2=True, sig_point2=False, color_sig2='k'
-            , color_contour2='k',step=1,SA=False, color_map='#d9d9d9'
-            , color_sig='magenta', sig_point=False, r_crit=1
-            , third_variable=False, data3=None, levels3=np.linspace(-1,1,11)):
+def PlotReg(data, data_cor, levels=np.linspace(-100,100,2), cmap='RdBu_r',
+            dpi=100, save=False, title='\m/', name_fig='fig_PlotReg',
+            sig=True, out_dir='', two_variables = False, data2=None,
+            data_cor2=None, levels2 = np.linspace(-100,100,2), sig2=True,
+            sig_point2=False, color_sig2='k', color_contour2='k', step=1,
+            SA=False, color_map='#d9d9d9', color_sig='magenta',
+            sig_point=False, r_crit=1, third_variable=False, data3=None,
+            levels3=np.linspace(-1,1,11)):
 
-    import matplotlib.pyplot as plt
     levels_contour = levels.copy()
     if isinstance(levels_contour, np.ndarray):
         levels_contour = levels_contour[levels_contour != 0]
@@ -1639,29 +1634,30 @@ def PlotReg(data, data_cor, levels=np.linspace(-100,100,2), cmap='RdBu_r'
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
         ax.set_extent([0, 359, -80, 20], crs=crs_latlon)
 
-    ax.contour(data.lon[::step], data.lat[::step], data[::step, ::step], linewidths=.5, alpha=0.5,
-               levels=levels_contour, transform=crs_latlon, colors='black')
+    ax.contour(data.lon[::step], data.lat[::step], data[::step, ::step],
+               linewidths=.5, alpha=0.5, levels=levels_contour,
+               transform=crs_latlon, colors='black')
 
-    im = ax.contourf(data.lon[::step], data.lat[::step], data[::step,::step],levels=levels,
-                     transform=crs_latlon, cmap=cmap, extend='both')
+    im = ax.contourf(data.lon[::step], data.lat[::step], data[::step,::step],
+                     levels=levels, transform=crs_latlon, cmap=cmap,
+                     extend='both')
     if sig:
         if sig_point:
             colors_l = [color_sig, color_sig]
-            cs = ax.contourf(data_cor.lon, data_cor.lat, data_cor.where(np.abs(data_cor) > np.abs(r_crit)),
-                             transform=crs_latlon, colors='none', hatches=["...", "..."],
-                             extend='lower')
+            cs = ax.contourf(data_cor.lon, data_cor.lat,
+                             data_cor.where(np.abs(data_cor) > np.abs(r_crit)),
+                             transform=crs_latlon, colors='none',
+                             hatches=["...", "..."], extend='lower')
+
             for i, collection in enumerate(cs.collections):
                 collection.set_edgecolor(colors_l[i % len(colors_l)])
 
             for collection in cs.collections:
                 collection.set_linewidth(0.)
-            # para hgt200 queda mejor los dos juntos
-            # ax.contour(data_cor.lon[::step], data_cor.lat[::step], data_cor[::step, ::step],
-            #            levels=np.linspace(-r_crit, r_crit, 2),
-            #            colors=color_sig, transform=crs_latlon, linewidths=1)
 
         else:
-            ax.contour(data_cor.lon[::step], data_cor.lat[::step], data_cor[::step, ::step],
+            ax.contour(data_cor.lon[::step], data_cor.lat[::step],
+                       data_cor[::step, ::step],
                        levels=np.linspace(-r_crit, r_crit, 2),
                        colors=color_sig, transform=crs_latlon, linewidths=1)
 
@@ -1672,62 +1668,68 @@ def PlotReg(data, data_cor, levels=np.linspace(-100,100,2), cmap='RdBu_r'
         if sig2:
             if sig_point2:
                 colors_l = [color_sig2, color_sig2]
-                cs = ax.contourf(data_cor2.lon, data_cor2.lat, data_cor2.where(np.abs(data_cor2) > np.abs(r_crit)),
-                                 transform=crs_latlon, colors='none', hatches=["...", "..."],
-                                 extend='lower', alpha=0.5)
+                cs = ax.contourf(
+                    data_cor2.lon, data_cor2.lat,
+                    data_cor2.where(np.abs(data_cor2) > np.abs(r_crit)),
+                    transform=crs_latlon, colors='none', hatches=["...", "..."],
+                    extend='lower', alpha=0.5)
+
                 for i, collection in enumerate(cs.collections):
                     collection.set_edgecolor(colors_l[i % len(colors_l)])
 
                 for collection in cs.collections:
                     collection.set_linewidth(0.)
                 # para hgt200 queda mejor los dos juntos
-                ax.contour(data_cor2.lon[::step], data_cor2.lat[::step], data_cor2[::step, ::step],
+                ax.contour(data_cor2.lon[::step], data_cor2.lat[::step],
+                           data_cor2[::step, ::step],
                            levels=np.linspace(-r_crit, r_crit, 2),
-                           colors=color_sig2, transform=crs_latlon, linewidths=1)
+                           colors=color_sig2, transform=crs_latlon,
+                           linewidths=1)
             else:
-                ax.contour(data_cor2.lon, data_cor2.lat, data_cor2, levels=np.linspace(-r_crit, r_crit, 2),
-                       colors=color_sig2, transform=crs_latlon, linewidths=1)
-                from matplotlib import colors
+                ax.contour(data_cor2.lon, data_cor2.lat, data_cor2,
+                           levels=np.linspace(-r_crit, r_crit, 2),
+                           colors=color_sig2, transform=crs_latlon,
+                           linewidths=1)
+
                 cbar = colors.ListedColormap([color_sig2, 'white', color_sig2])
                 cbar.set_over(color_sig2)
                 cbar.set_under(color_sig2)
                 cbar.set_bad(color='white')
-                ax.contourf(data_cor2.lon, data_cor2.lat, data_cor2, levels=[-1,-r_crit, 0, r_crit,1],
-                       cmap=cbar, transform=crs_latlon, linewidths=1, alpha=0.3)
+                ax.contourf(data_cor2.lon, data_cor2.lat, data_cor2,
+                            levels=[-1,-r_crit, 0, r_crit,1], cmap=cbar,
+                            transform=crs_latlon, linewidths=1, alpha=0.3)
 
     if third_variable:
-        ax.contour(data3.lon[::2], data3.lat[::2], data3[::2,::2],levels=levels3,
-                   colors=['#D300FF','#00FF5D'], transform=crs_latlon, linewidths=1.5)
+        ax.contour(data3.lon[::2], data3.lat[::2], data3[::2,::2],
+                   levels=levels3, colors=['#D300FF','#00FF5D'],
+                   transform=crs_latlon, linewidths=1.5)
 
     cb = plt.colorbar(im, fraction=0.042, pad=0.035,shrink=0.8)
     cb.ax.tick_params(labelsize=8)
     ax.add_feature(cartopy.feature.LAND, facecolor='white', edgecolor=color_map)
-    #ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.5)
-    # ax.add_feature(cartopy.feature.BORDERS, linestyle='-', alpha=.5)
+
     if SA:
         ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.5, zorder=17)
-        #ax.add_feature(cartopy.feature.COASTLINE)
-        ocean = cartopy.feature.NaturalEarthFeature('physical', 'ocean',
-                                                    scale='50m', facecolor='white', alpha=1)
+        ocean = cartopy.feature.NaturalEarthFeature(
+            'physical', 'ocean', scale='50m', facecolor='white', alpha=1)
         ax.add_feature(ocean, linewidth=0.2, zorder=15)
         ax.set_xticks(np.arange(270, 330, 10), crs=crs_latlon)
         ax.set_yticks(np.arange(-60, 20, 20), crs=crs_latlon)
 
         ax2 = ax.twinx()
         ax2.set_yticks([])
-        #ax2.set_xticks([])
-
     else:
+
         ax.set_xticks(np.arange(0, 360, 30), crs=crs_latlon)
         ax.set_yticks(np.arange(-80, 20, 10), crs=crs_latlon)
         ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.5)
         ax.coastlines(color=color_map, linestyle='-', alpha=1)
+
     ax.gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', zorder=20)
     lon_formatter = LongitudeFormatter(zero_direction_label=True)
     lat_formatter = LatitudeFormatter()
     ax.xaxis.set_major_formatter(lon_formatter)
     ax.yaxis.set_major_formatter(lat_formatter)
-    #ax2.spines['left'].set_color('k')
 
     ax.tick_params(labelsize=7)
     plt.title(title, fontsize=10)
@@ -1741,16 +1743,17 @@ def PlotReg(data, data_cor, levels=np.linspace(-100,100,2), cmap='RdBu_r'
     else:
         plt.show()
 
-
 def ComputeWithEffect(data=None, data2=None, n34=None, dmi=None,
                      two_variables=False, full_season=False,
                      time_original=None,m=9):
     print('Reg...')
     print('#-- With influence --#')
-    aux_n34, aux_dmi, aux_n34_2, aux_dmi_2 = RegWEffect(data=data, data2=data2,
-                                                       n34=n34.__mul__(1 / n34.std('time')),
-                                                       dmi=dmi.__mul__(1 / dmi.std('time')),
-                                                       m=m, two_variables=two_variables)
+    aux_n34, aux_dmi, aux_n34_2, aux_dmi_2 = \
+        RegWEffect(data=data, data2=data2,
+                   n34=n34.__mul__(1 / n34.std('time')),
+                   dmi=dmi.__mul__(1 / dmi.std('time')),
+                   m=m, two_variables=two_variables)
+
     if full_season:
         print('Full Season')
         n34 = n34.rolling(time=5, center=True).mean()
@@ -1764,10 +1767,13 @@ def ComputeWithEffect(data=None, data2=None, n34=None, dmi=None,
     aux_corr_n34_2 = 0
     if two_variables:
         print('Corr2..')
-        aux_corr_n34_2 = Corr(datos=data2, index=n34, time_original=time_original, m=m)
-        aux_corr_dmi_2 = Corr(datos=data2, index=dmi, time_original=time_original, m=m)
+        aux_corr_n34_2 = Corr(datos=data2, index=n34,
+                              time_original=time_original, m=m)
+        aux_corr_dmi_2 = Corr(datos=data2, index=dmi,
+                              time_original=time_original, m=m)
 
-    return aux_n34, aux_corr_n34, aux_dmi, aux_corr_dmi, aux_n34_2, aux_corr_n34_2, aux_dmi_2, aux_corr_dmi_2
+    return aux_n34, aux_corr_n34, aux_dmi, aux_corr_dmi, aux_n34_2, \
+        aux_corr_n34_2, aux_dmi_2, aux_corr_dmi_2
 
 def ComputeWithoutEffect(data, n34, dmi, m, time_original):
     # -- Without influence --#
@@ -1786,24 +1792,31 @@ def ComputeWithoutEffect(data, n34, dmi, m, time_original):
                    m=m, datos=data)
 
     print('Corr...')
-    aux_corr_n34 = Corr(datos=data_n34_wodmi, index=n34_wo_dmi, time_original=time_original,m=m)
-    aux_corr_dmi = Corr(datos=data_dmi_won34, index=dmi_wo_n34, time_original=time_original,m=m)
+    aux_corr_n34 = Corr(datos=data_n34_wodmi, index=n34_wo_dmi,
+                        time_original=time_original,m=m)
+    aux_corr_dmi = Corr(datos=data_dmi_won34, index=dmi_wo_n34,
+                        time_original=time_original,m=m)
 
     return aux_n34_wodmi, aux_corr_n34, aux_dmi_won34, aux_corr_dmi
-########################################################################################################################
-# CFSv2 ################################################################################################################
-def SelectNMMEFiles(model_name, variable, dir, anio='0', in_month='0', by_r=False, r='0',  All=False):
-    import glob
+
+################################################################################
+# CFSv2 ########################################################################
+def SelectNMMEFiles(model_name, variable, dir, anio='0', in_month='0',
+                    by_r=False, r='0',  All=False):
+
     """
-    Selecciona los archivos en funcion de del mes de entrada (in_month) o del miembro de ensamble (r)
+    Selecciona los archivos en funcion de del mes de entrada (in_month) 
+    o del miembro de ensamble (r)
 
     :param model_name: [str] nombre del modelo
     :param variable:[str] variable usada en el nombre del archivo
     :param dir:[str] directorio de los archivos a abrir
     :param anio:[str] anio de inicio del pronostico
     :param in_month:[str] mes de inicio del pronostico
-    :param by_r: [bool] True para seleccionar todos los archivos de un mismo miembro de ensamble
-    :param r: [str] solo si by_r = True, numero del miembro de ensamble que se quiere abrir
+    :param by_r: [bool] True para seleccionar todos los archivos de un mismo
+     miembro de ensamble
+    :param r: [str] solo si by_r = True, numero del miembro de ensamble que s
+    e quiere abrir
     :return: lista con los nombres de los archivos seleccionados
     """
 
@@ -1849,8 +1862,10 @@ def SelectNMMEFiles(model_name, variable, dir, anio='0', in_month='0', by_r=Fals
                           '_r*' +'_*' + '-*.nc')
 
     else:
-        files = glob.glob(dir + variable + '_Amon_' + model_name + '_' + anio + m_in + in_month +
-                          '_r*_' + anio + m_in + in_month + '-' + str(int(anio) + y1) + m_en +
+        files = glob.glob(dir + variable + '_Amon_' + model_name + '_' +
+                          anio + m_in + in_month +
+                          '_r*_' + anio + m_in + in_month + '-' +
+                          str(int(anio) + y1) + m_en +
                           str(int(in_month) - m1) + '.nc')
 
     return files
@@ -2123,244 +2138,6 @@ def DetrendClim(data, mm, v_name='prec'):
 
     return season_anom_detrend.mean(['r', 'time'])
 
-
-def ComputeFieldsByCases(v, v_name, fix_factor, snr,
-                         levels_main, cbar_main, levels_clim, cbar_clim,
-                         title_var, name_fig, dpi,
-                         cases, bin_limits, bins_by_cases_dmi, bins_by_cases_n34,
-                         cases_dir, dates_dir,
-                         figsize=[16, 17], usemask=True, hcolorbar=False, save=True,
-                         proj='eq', obsdates=False, out_dir='~/'):
-    # no, una genialidad... -------------------------------------------------------------------------------------------#
-    sec_plot = [13, 14, 10, 11,
-                7, 2, 22, 17,
-                8, 3, 9, 4,
-                20, 15, 21, 16,
-                5, 0, 6, 1,
-                23, 18, 24, 19]
-    row_titles = ['Strong El Niño', None, None, None, None,
-                  'Moderate El Niño', None, None, None, None,
-                  'Neutro ENSO', None, None, None, None,
-                  'Moderate La Niña', None, None, None, None,
-                  'Strong La Niña', None, None, None, None]
-    col_titles = ['Strong IOD - ', 'Moderate IOD - ', 'Neutro IOD', 'Moderate IOD + ', 'Strong IOD + ']
-    num_neutros = [483, 585, 676, 673]
-    porcentaje = 0.1
-    # ------------------------------------------------------------------------------------------------------------------#
-    print('Only SON')
-    print('No climatology')
-    mm = 10
-    for s in ['SON']:
-        n_check = []
-        sec_count = 0
-        # esto no tiene sentido
-        # comp_case_clim = DetrendClim(data, mm, v_name=v_name)
-
-        crs_latlon = ccrs.PlateCarree()
-        if proj == 'eq':
-            fig, axs = plt.subplots(nrows=5, ncols=5,
-                                    subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
-                                    figsize=(figsize[0], figsize[1]))
-        else:
-            fig, axs = plt.subplots(nrows=5, ncols=5,
-                                    subplot_kw={'projection': ccrs.SouthPolarStereo(central_longitude=200)},
-                                    figsize=(figsize[0], figsize[1]))
-        axs = axs.flatten()
-        # Loop en los cases -{neutro} ---------------------------------------------------------------------------------#
-        for c_count in [0, 1, 2, 3, 4, 5, 6, 7]:  # , 8]:
-            cases_bin, num_bin, aux = BinsByCases(v=v, v_name=v_name, fix_factor=fix_factor,
-                                                  s=s, mm=mm, c=cases[c_count], c_count=c_count,
-                                                  bin_limits=bin_limits, bins_by_cases_dmi=bins_by_cases_dmi,
-                                                  bins_by_cases_n34=bins_by_cases_n34, snr=snr,
-                                                  cases_dir=cases_dir, dates_dir=dates_dir, obsdates=obsdates)
-
-            bins_aux_dmi = bins_by_cases_dmi[c_count]
-            bins_aux_n34 = bins_by_cases_n34[c_count]
-            for b_dmi in range(0, len(bins_aux_dmi)):
-                for b_n34 in range(0, len(bins_aux_n34)):
-                    n = sec_plot[sec_count]
-                    if proj != 'eq':
-                        axs[n].set_extent([0, 360, -80, 20],
-                                          ccrs.PlateCarree(central_longitude=200))
-                    comp_case = cases_bin[b_dmi][b_n34]
-
-
-                    # if v == 'prec' and s == 'JJA':
-                    #
-                    #     mask2 = regionmask.defined_regions.natural_earth_v5_0_0.countries_110.mask(comp_case_clim)
-                    #     mask2 = xr.where(np.isnan(mask2), mask2, 1)
-                    #     mask2 = mask2.to_dataset(name='prec')
-                    #
-                    #     dry_season_mask = comp_case_clim.where(comp_case_clim.prec>30)
-                    #     dry_season_mask = xr.where(np.isnan(dry_season_mask), dry_season_mask, 1)
-                    #     dry_season_mask *= mask2
-                    #
-                    #     if snr:
-                    #         comp_case['var'] *= dry_season_mask.prec
-                    #     else:
-                    #         comp_case *= dry_season_mask.prec.values
-
-                    if usemask:
-                        mask = regionmask.defined_regions.natural_earth_v5_0_0.countries_110.mask(aux)
-                        mask = xr.where(np.isnan(mask), mask, 1)
-                        comp_case *= mask
-                    if snr:
-                        comp_case = comp_case['var']
-
-                    if num_bin[b_dmi][b_n34] > num_neutros[mm - 7] * porcentaje:
-                        im = axs[n].contourf(aux.lon, aux.lat, comp_case,
-                                             levels=levels_main, transform=crs_latlon,
-                                             cmap=cbar_main, extend='both')
-
-                        levels_contour = levels_main.copy()
-                        if isinstance(levels_main, np.ndarray):
-                            levels_contour = levels_main[levels_main != 0]
-                        else:
-                            levels_contour.remove(0)
-
-                        axs[n].contour(aux.lon, aux.lat, comp_case,
-                                        levels=levels_contour,
-                                        transform=crs_latlon,
-                                        colors='k', linewidths=1)
-
-                        axs[n].add_feature(cartopy.feature.LAND, facecolor='lightgrey')
-                        axs[n].add_feature(cartopy.feature.COASTLINE)
-                        if proj == 'eq':
-                            axs[n].gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', color='gray')
-                            axs[n].set_xticks([])
-                            axs[n].set_yticks([])
-                            axs[n].set_extent([270,330,-60,20])
-                            # axs[n].set_xticks(x_lon, crs=crs_latlon)
-                            # axs[n].set_yticks(x_lat, crs=crs_latlon)
-                            # lon_formatter = LongitudeFormatter(zero_direction_label=True)
-                            # lat_formatter = LatitudeFormatter()
-                            # axs[n].xaxis.set_major_formatter(lon_formatter)
-                            # axs[n].yaxis.set_major_formatter(lat_formatter)
-                        else:
-                            # polar
-                            gls = axs[n].gridlines(draw_labels=True, crs=crs_latlon, lw=0.3, color="gray",
-                                                   y_inline=True, xlocs=range(-180, 180, 30),
-                                                   ylocs=np.arange(-80, 20, 20))
-                            r_extent = 1.2e7
-                            axs[n].set_xlim(-r_extent, r_extent)
-                            axs[n].set_ylim(-r_extent, r_extent)
-                            circle_path = mpath.Path.unit_circle()
-                            circle_path = mpath.Path(circle_path.vertices.copy() * r_extent,
-                                                     circle_path.codes.copy())
-                            axs[n].set_boundary(circle_path)
-                            axs[n].set_frame_on(False)
-                            plt.draw()
-                            for ea in gls._labels:
-                                pos = ea[2].get_position()
-                                if (pos[0] == 150):
-                                    ea[2].set_position([0, pos[1]])
-
-                        axs[n].tick_params(labelsize=0)
-
-                        if n == 0 or n == 1 or n == 2 or n == 3 or n == 4:
-                            axs[n].set_title(col_titles[n], fontsize=15)
-
-                        if n == 0 or n == 5 or n == 10 or n == 15 or n == 20:
-                            axs[n].set_ylabel(row_titles[n], fontsize=15)
-
-                        axs[n].xaxis.set_label_position('top')
-                        axs[n].set_xlabel('N=' + str(num_bin[b_dmi][b_n34]), fontsize=12, loc='left', fontweight="bold")
-
-                    else:
-                        n_check.append(n)
-                        axs[n].axis('off')
-
-                    sec_count += 1
-
-        # subtitulos columnas de no ploteados -------------------------------------------------------------------------#
-        for n_aux in [0, 1, 2, 3, 4]:
-            if n_aux in n_check:
-                if n_aux + 5 in n_check:
-                    axs[n_aux + 10].set_title(col_titles[n_aux], fontsize=15)
-                else:
-                    axs[n_aux + 5].set_title(col_titles[n_aux], fontsize=15)
-
-        for n_aux in [0, 5, 10, 15, 20]:
-            if n_aux in n_check:
-                if n_aux + 1 in n_check:
-                    axs[n_aux + 2].set_ylabel(row_titles[n_aux], fontsize=15)
-                else:
-                    axs[n_aux + 1].set_ylabel(row_titles[n_aux], fontsize=15)
-
-        # Climatologia = NADA en HGT ----------------------------------------------------------------------------------#
-        # en el lugar del neutro -> climatología de la variable (data)
-
-        # if usemask:
-        #     comp_case_clim = comp_case_clim[v_name] * fix_factor * mask
-        # else:
-        #     comp_case_clim = comp_case_clim[v_name] * fix_factor
-
-        # if v_name=='hgt':
-        #     comp_case_clim = 0
-
-        aux0 = aux.sel(r=1, time='1982-10-01').drop(['r', 'L', 'time'])
-        im2 = axs[12].contourf(aux.lon, aux.lat, aux0['var'][0, :, :],
-                               levels=levels_clim, transform=crs_latlon, cmap=cbar_clim, extend='max')
-        axs[12].set_extent([270, 330, -60, 20])
-        # --------------------------------------------------------------------------------------------------------------#
-        axs[12].add_feature(cartopy.feature.LAND, facecolor='grey')
-        axs[12].add_feature(cartopy.feature.COASTLINE)
-
-        if v_name != 'hgt':
-            cb = plt.colorbar(im2, fraction=0.042, pad=0.032, shrink=1, ax=axs[12], aspect=20)
-            cb.ax.tick_params(labelsize=5)
-
-        if proj == 'eq':
-            axs[12].gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', color='gray')
-            axs[12].set_xticks([])
-            axs[12].set_yticks([])
-        else:
-            # polar
-            gls = axs[12].gridlines(draw_labels=True, crs=crs_latlon, lw=0.3, color="gray",
-                                    y_inline=True, xlocs=range(-180, 180, 30), ylocs=np.arange(-80, 0, 20))
-            r_extent = 1.2e7
-            axs[12].set_xlim(-r_extent, r_extent)
-            axs[12].set_ylim(-r_extent, r_extent)
-            circle_path = mpath.Path.unit_circle()
-            circle_path = mpath.Path(circle_path.vertices.copy() * r_extent,
-                                     circle_path.codes.copy())
-            axs[12].set_boundary(circle_path)
-            axs[12].set_frame_on(False)
-            axs[12].tick_params(labelsize=0)
-            plt.draw()
-            for ea in gls._labels:
-                pos = ea[2].get_position()
-                if (pos[0] == 150):
-                    ea[2].set_position([0, pos[1]])
-
-        if hcolorbar:
-            pos = fig.add_axes([0.2, 0.05, 0.6, 0.01])
-            cbar = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
-        else:
-            pos = fig.add_axes([0.90, 0.2, 0.012, 0.6])
-            cbar = fig.colorbar(im, cax=pos, pad=0.1)
-
-        cbar.ax.tick_params(labelsize=18)
-        if snr:
-            fig.suptitle('Signal-to-Noise ratio:' + title_var + ' - ' + s, fontsize=20)
-        else:
-            fig.suptitle(title_var + ' - ' + s, fontsize=20)
-        # fig.tight_layout() #BUG matplotlib 3.5.0 #Solucionado definitivamnete en 3.6 ?
-        if hcolorbar:
-            fig.subplots_adjust(top=0.93, bottom=0.07)
-        else:
-            fig.subplots_adjust(top=0.93)
-        if save:
-            if snr:
-                plt.savefig(out_dir + 'SNR_' + name_fig + '_' + s + '.jpg', bbox_inches='tight', dpi=dpi)
-            else:
-                plt.savefig(out_dir + name_fig + '_' + s + '.jpg', bbox_inches='tight', dpi=dpi)
-
-            plt.close('all')
-        else:
-            plt.show()
-        mm += 1
-
 # Plots ################################################################################################################
 def PlotComp(comp, comp_var, title='Fig', fase=None, name_fig='Fig',
              save=False, dpi=200, levels=np.linspace(-1.5, 1.5, 13),
@@ -2368,10 +2145,6 @@ def PlotComp(comp, comp_var, title='Fig', fase=None, name_fig='Fig',
              waf=False, px=None, py=None, text=True, SA=False,
              two_variables = False, comp2=None, step = 1,
              levels2=np.linspace(-1.5, 1.5, 13), contour0 = False):
-
-    from numpy import ma
-    import matplotlib.pyplot as plt
-
 
     if SA:
         fig = plt.figure(figsize=(5, 6), dpi=dpi)
@@ -2531,18 +2304,18 @@ def Plots(data, variable='var', neutral=None, DMI_pos=None, DMI_neg=None,
                  comp2=comp2, step=step,
                  levels2=levels2, contour0=contour0)
 
-
 def PlotComposite_wWAF(comp, levels, cmap, step1, contour1=True,
-                       two_variables=False, comp2=None, levels2=np.linspace(-1, 1, 13), step2=4,
-                       mapa='sa', title='title', name_fig='name_fig', dpi=100, save=False,
-                       comp_sig=None, color_sig='k', significance=True, linewidht2=.5, color_map='#d9d9d9',
+                       two_variables=False, comp2=None,
+                       levels2=np.linspace(-1, 1, 13), step2=4, mapa='sa',
+                       title='title', name_fig='name_fig', dpi=100, save=False,
+                       comp_sig=None, color_sig='k', significance=True,
+                       linewidht2=.5, color_map='#d9d9d9',
                        out_dir='RUTA', proj='eq', borders=False,
-                       third_variable=False, comp3=None, levels_contour3=np.linspace(-1, 1, 13),
-                       waf=False, data_waf=None, px=None, py=False, waf_scale=1 / 1000, step_waf=10, hatches='..'):
-    import matplotlib.pyplot as plt
-    import cartopy.feature
-    from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-    import cartopy.crs as ccrs
+                       third_variable=False, comp3=None,
+                       levels_contour3=np.linspace(-1, 1, 13),
+                       waf=False, data_waf=None, px=None, py=False,
+                       waf_scale=1 / 1000, step_waf=10, hatches='..'):
+
 
     if mapa.lower() == 'sa':
         fig_size = (5, 6)
@@ -2635,7 +2408,6 @@ def PlotComposite_wWAF(comp, levels, cmap, step1, contour1=True,
             collection.set_linewidth(0.)
 
     if waf:
-        from numpy import ma
         Q60 = np.nanpercentile(np.sqrt(np.add(np.power(px, 2), np.power(py, 2))), 60)
         M = np.sqrt(np.add(np.power(px, 2), np.power(py, 2))) < Q60
         # mask array
@@ -2701,8 +2473,8 @@ def PlotComposite_wWAF(comp, levels, cmap, step1, contour1=True,
         plt.close()
     else:
         plt.show()
-########################################################################################################################
 
+################################################################################
 def CreateDirectory(out_dir, *args):
     for arg in args:
         if arg is not None:
@@ -2715,7 +2487,6 @@ def DirAndFile(out_dir, dir_results, common_name, names, format='jpg'):
     return path
 
 # Esto era de los esquemas pero por alguna razon se borro parte de ese codigo
-from scipy.signal import convolve2d
 def moving_average_2d(data, window):
     """Moving average on two-dimensional data.
     """
@@ -2738,35 +2509,9 @@ def RenameDataset(new_name, *args):
         dataset.append(arg2)
 
     return tuple(dataset)
+
 ################################################################################
-# PlotFinal
-"""
-Grafico de contourf
-args: data, levels, cbar, title, namefig, map
-
-Grafico de contour
-args: data_ctn, levels_ctn, color_ctn = 'k', title, namefig, map
-
-Grafico contour 2
-args: data_ctn2, levels_ctn2, color_ctn2 = 'k', title, namefig, map
-
-Add WAF
-args: waf = True, wafx, wafy, otros seteos?
-
-Otros seteos:
-- tamaño de la figura o mejor tener en cuenta un ratio? 
-(depende de la revista)
-
-"""
-
-# fig = plt.figure(figsize=(9, 3.5), dpi=dpi)
-# ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
-# ax.set_extent([0, 359, -80, 20], crs=crs_latlon)
-# def SetDataToPlotFinal(*args):
-#     data = xr.concat(args, dim='plots')
-#     data = data.assign_coords(plots=range(len(args)))
-#     return data
-
+# PlotFinal ####################################################################
 def SetDataToPlotFinal(*args):
     data_arrays = []
     first = True
@@ -2805,22 +2550,17 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
               num_cases=False, num_cases_data=None, pdf=False, ocean_mask=False,
               data_ctn_no_ocean_mask=False, data_ctn2_no_ocean_mask=False):
 
-    import matplotlib.gridspec as gridspec
     # cantidad de filas necesarias
     if num_cols is None:
         num_cols = 2
-
     width = width
-    # if num_cols == 2:
-    #     width = 22
-    # else:
-
     plots = data.plots.values
     num_plots = len(plots)
     num_rows = np.ceil(num_plots / num_cols).astype(int)
 
     crs_latlon = ccrs.PlateCarree()
 
+    # mapa
     if map.upper() == 'HS':
         extent = [0, 359, -80, 20]
         high = high
@@ -2837,17 +2577,17 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
         print(f"Mapa {map} no seteado")
         return
 
+    # plot
     fig, axes = plt.subplots(
         num_rows, num_cols, figsize=(width, high * num_rows),
         subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
         gridspec_kw={'wspace': 0.1, 'hspace': 0.2})
 
-    import string
-
     i = 0
     for ax, plot in zip(axes.flatten(), plots):
         no_plot = False
 
+        # CONTOUR ------------------------------------------------------------ #
         if data_ctn is not None:
             if levels_ctn is None:
                 levels_ctn = levels.copy()
@@ -2876,7 +2616,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                            levels=levels_ctn, transform=crs_latlon,
                            colors=color_ctn)
 
-
+        # CONTOUR2 ----------------------------------------------------------- #
         if data_ctn2 is not None:
             if levels_ctn2 is None:
                 levels_ctn2 = levels.copy()
@@ -2905,6 +2645,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                            levels=levels_ctn2, transform=crs_latlon,
                            colors=color_ctn2)
 
+        # CONTOURF ----------------------------------------------------------- #
         aux = data.sel(plots=plot)
         if aux.mean().values != 0:
 
@@ -2924,6 +2665,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             ax.axis('off')
             no_plot=True
 
+        # WAF ---------------------------------------------------------------- #
         if data_waf is not None:
             wafx_aux = wafx.sel(plots=plot)
             wafy_aux = wafy.sel(plots=plot)
@@ -2933,7 +2675,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                 wafx_aux = wafx_aux * mask_ocean.mask
                 wafy_aux = wafy_aux * mask_ocean.mask
 
-            from numpy import ma
+
             Q60 = np.nanpercentile(np.sqrt(np.add(np.power(wafx_aux, 2),
                                                   np.power(wafy_aux, 2))), 60)
             M = np.sqrt(np.add(np.power(wafx_aux, 2),
@@ -2952,21 +2694,20 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             # plot vectors
             lons, lats = np.meshgrid(data_waf.lon.values, data_waf.lat.values)
             Q = ax.quiver(lons[::waf_step, ::waf_step],
-                      lats[::waf_step, ::waf_step],
-                      wafx_mask[::waf_step, ::waf_step],
-                      wafy_mask[::waf_step, ::waf_step],
-                      transform=crs_latlon, pivot='tail',
+                          lats[::waf_step, ::waf_step],
+                          wafx_mask[::waf_step, ::waf_step],
+                          wafy_mask[::waf_step, ::waf_step],
+                          transform=crs_latlon, pivot='tail',
                           width=1.7e-3, headwidth=4, alpha=1, headlength=2.5,
-                          color='k',
-                          scale=waf_scale,
-                          angles='xy', scale_units='xy')
+                          color='k', scale=waf_scale, angles='xy',
+                          scale_units='xy')
 
             ax.quiverkey(Q, 0.85, 0.05, waf_label,
                          f'{waf_label:.1e} $m^2$ $s^{{-2}}$',
-                         labelpos='E', coordinates='figure',
-                         labelsep=0.05,
+                         labelpos='E', coordinates='figure', labelsep=0.05,
                          fontproperties=FontProperties(size=6, weight='light'))
 
+        # SIG ---------------------------------------------------------------- #
         if sig_points is not None:
             aux_sig_points = sig_points.sel(plots=plot)
             if aux_sig_points.mean().values != 0:
@@ -2984,10 +2725,8 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                 cs = ax.contourf(aux_sig_points.lon[::step],
                                  aux_sig_points.lat[::step],
                                  comp_sig_var[::step, ::step],
-                                 transform=crs_latlon,
-                                 colors='none',
-                                 hatches=[hatches, hatches],
-                                 extend='lower')
+                                 transform=crs_latlon, colors='none',
+                                 hatches=[hatches, hatches], extend='lower')
 
                 for i2, collection in enumerate(cs.collections):
                     collection.set_edgecolor(colors_l[i2 % len(colors_l)])
@@ -2995,7 +2734,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                 for collection in cs.collections:
                     collection.set_linewidth(0.)
 
-
+        # no plotear --------------------------------------------------------- #
         if no_plot is False:
             if num_cases:
                 ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]}), "
@@ -3008,7 +2747,6 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
 
             ax.add_feature(cartopy.feature.LAND, facecolor='white',
                            linewidth=0.5)
-            # ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
             ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
                           resolution='110m')
             gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
@@ -3030,20 +2768,15 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
 
-        # Eliminar los lugares en blanco que existan
-        # for i in range(num_plots, num_rows * num_cols):
-        #     fig.delaxes(axes.flatten()[i])
-
-
     #cbar_pos = 'H'
     if cbar_pos.upper() == 'H':
         pos = fig.add_axes([0.235, 0.03, 0.5, 0.02])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
         cb.ax.tick_params(labelsize=5, pad=1)
-        fig.subplots_adjust(bottom=0.1, wspace=0, hspace=0.25,
-                            left=0, right=1, top=1)
+        fig.subplots_adjust(bottom=0.1, wspace=0, hspace=0.25, left=0, right=1,
+                            top=1)
+
     elif cbar_pos.upper() == 'V':
-        import matplotlib.patches as mpatches
         aux_color = cmap.colors[2]
         patch = mpatches.Patch(color=aux_color, label='Ks < 0')
 
@@ -3070,12 +2803,15 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
                         clim_plot=None, clim_levels=None,clim_cbar=None,
                         high=2, width = 7.08661, cbar_pos='H', plot_step=3,
                         contourf_clim=False, pdf=True):
+
+    # cantidad de filas necesarias
     num_cols = 5
     num_rows = 5
 
     plots = data.plots.values
     crs_latlon = ccrs.PlateCarree()
 
+    # mapa
     if map.upper() == 'HS':
         extent = [0, 359, -80, 20]
         high = high
@@ -3099,16 +2835,17 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
         print(f"Mapa {map} no seteado")
         return
 
+    # plot
     fig, axes = plt.subplots(
         num_rows, num_cols, figsize=(width, high * num_rows),
         subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
         gridspec_kw={'wspace': 0.05, 'hspace': 0.01})
 
-    import string
     i2 = 0
     for i, (ax, plot) in enumerate(zip(axes.flatten(), plots)):
         remove_axes = False
 
+        # Seteo filas, titulos ----------------------------------------------- #
         if i == 2 or i == 10:
             ax.set_title(col_titles[i], fontsize=5, pad=2)
             ax.yaxis.set_label_position('left')
@@ -3143,9 +2880,9 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
 
         ax.tick_params(width=0.5, pad=1, labelsize=4)
 
-        if plot == 12:
-            if contourf_clim:
-
+        # Plot --------------------------------------------------------------- #
+        if plot == 12: # Clima
+            if contourf_clim: # Contourf ------------------------------------- #
                 ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
                                        f"$N={titles[plot]}$",
                         transform=ax.transAxes, size=4)
@@ -3158,15 +2895,7 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
                                  transform=crs_latlon, cmap=clim_cbar,
                                  extend='both')
 
-                # cp = ax.contour(clim_plot.lon.values[::plot_step],
-                #                 clim_plot.lat.values[::plot_step],
-                #                 clim_plot['var'][::plot_step, ::plot_step],
-                #                 linewidth=0.2, levels=clim_levels,
-                #                 transform=crs_latlon, colors='k')
-
-
-
-            else:
+            else: # Contour -------------------------------------------------- #
 
                 ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
                         transform=ax.transAxes, size=4)
@@ -3179,14 +2908,10 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
                                 transform=crs_latlon, cmap=clim_cbar)
 
             ax.add_feature(cartopy.feature.LAND, facecolor='white')
-
-            #ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
-            ax.coastlines(color='k', linestyle='-', alpha=1,
-                          resolution='110m', linewidth=0.2)
+            ax.coastlines(color='k', linestyle='-', alpha=1, resolution='110m',
+                          linewidth=0.2)
             ax.set_title('Climatology', fontsize=4, pad=1)
-
-            gl = ax.gridlines(draw_labels=False, linewidth=0.3,
-                              linestyle='-',
+            gl = ax.gridlines(draw_labels=False, linewidth=0.3, linestyle='-',
                               zorder=20)
 
             gl.ylocator = plt.MultipleLocator(20)
@@ -3195,8 +2920,9 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
 
-        else:
+        else: # Todos los otros ploteos -------------------------------------- #
 
+            # Contour -------------------------------------------------------- #
             if data_ctn is not None:
                 if levels_ctn is None:
                     levels_ctn = levels.copy()
@@ -3210,7 +2936,6 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
                 aux_ctn = data_ctn.sel(plots=plot)
 
                 if aux_ctn.mean().values != 0:
-
                     ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
                                            f"$N={titles[plot]}$",
                             transform=ax.transAxes, size=4)
@@ -3236,6 +2961,7 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
             except:
                 aux_var = aux.values
 
+            # Contourf ------------------------------------------------------- #
             if aux.mean().values != 0:
                 im = ax.contourf(aux.lon.values[::plot_step],
                                  aux.lat.values[::plot_step],
@@ -3262,12 +2988,12 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
 
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
+
     # cbar_pos = 'H'
     if cbar_pos.upper() == 'H':
         pos = fig.add_axes([0.261, 0, 0.5, 0.02])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
         cb.ax.tick_params(labelsize=4, pad=1)
-
         fig.subplots_adjust(bottom=0.05, wspace=0, hspace=0.25, left=0, right=1,
                             top=1)
 
@@ -3275,12 +3001,10 @@ def PlotFinal_Figs12_13(data, levels, cmap, titles, namefig, map, save, dpi,
         pos = fig.add_axes([0.261, 0, 0.5, 0.02])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='vertical')
         cb.ax.tick_params(labelsize=4, pad=1)
-
         fig.subplots_adjust(bottom=0.05, wspace=0, hspace=0.25, left=0, right=1,
                             top=1)
     else:
         print(f"cbar_pos {cbar_pos} no valido")
-
 
     if save:
         if pdf:
@@ -3299,16 +3023,17 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                    clim_cbar=None, high=2, width = 7.08661,
                                    cbar_pos='H', plot_step=3,
                                    clim_plot_ctn=None, clim_levels_ctn=None,
-                                   pdf=True,
-                                   ocean_mask=False,
-                                   data_ctn_no_ocean_mask=False
-                                   ):
+                                   pdf=True, ocean_mask=False,
+                                   data_ctn_no_ocean_mask=False):
+
+    # cantidad de filas necesarias
     num_cols = 5
     num_rows = 5
 
     plots = data.plots.values
     crs_latlon = ccrs.PlateCarree()
 
+    # mapa
     if map.upper() == 'HS':
         extent = [0, 359, -80, 20]
         high = high
@@ -3332,16 +3057,17 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
         print(f"Mapa {map} no seteado")
         return
 
+    # plot
     fig, axes = plt.subplots(
         num_rows, num_cols, figsize=(width, high * num_rows),
         subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
         gridspec_kw={'wspace': 0.05, 'hspace': 0.01})
 
-    import string
     i2 = 0
     for i, (ax, plot) in enumerate(zip(axes.flatten(), plots)):
         remove_axes = False
 
+        # Seteo filas, titulos ----------------------------------------------- #
         if i == 2 or i == 10:
             ax.set_title(f'{col_titles[i]}\n                           ',
                          fontsize=5, pad=2, loc='left')
@@ -3377,8 +3103,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             #ax.set_extent(extent, crs=crs_latlon)
 
         ax.tick_params(width=0.5, pad=1, labelsize=4)
-
-        if plot == 12:
+        # Plot --------------------------------------------------------------- #
+        if plot == 12:  # Clima
             if clim_plot.mean()['var'].values != 0:
 
                 if ocean_mask is True:
@@ -3389,6 +3115,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     [0.365, 0.41, 0.19, 0.18],
                     projection=ccrs.PlateCarree())
 
+                # Contour ---------------------------------------------------- #
                 if clim_plot_ctn and clim_plot_ctn.mean()['var'].values != 0:
 
                     if ocean_mask is True and data_ctn_no_ocean_mask is False:
@@ -3402,6 +3129,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                    levels=clim_levels_ctn, transform=crs_latlon,
                                    colors=color_ctn)
 
+                # Contourf --------------------------------------------------- #
                 cp = ax_new.contourf(clim_plot.lon.values[::plot_step],
                                      clim_plot.lat.values[::plot_step],
                                      clim_plot['var'][::plot_step,
@@ -3410,11 +3138,6 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                      transform=crs_latlon,
                                      cmap=clim_cbar,
                                      extend='both')
-
-
-
-                # ax_new.coastlines(color='k', linestyle='-', alpha=1,
-                #                   resolution='110m', linewidth=0.2)
 
                 ax_new.set_title('Plot 12', fontsize=5)
 
@@ -3428,28 +3151,14 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     spine.set_linewidth(0.5)
 
                 else:
-
                     pass
-                    # ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
-                    #         transform=ax.transAxes, size=4)
-                    # i2 += 1
-                    #
-                    # cp = ax.contour(clim_plot.lon.values[::plot_step],
-                    #                 clim_plot.lat.values[::plot_step],
-                    #                 clim_plot['var'][::plot_step, ::plot_step],
-                    #                 linewidth=0.4, levels=clim_levels,
-                    #                 transform=crs_latlon, cmap=clim_cbar)
 
                 ax_new.add_feature(cartopy.feature.LAND, facecolor='white')
-
-                # ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
                 ax_new.coastlines(color='k', linestyle='-', alpha=1,
                                   resolution='110m', linewidth=0.2)
                 ax_new.set_title('Climatology', fontsize=4, pad=1)
-
                 gl = ax_new.gridlines(draw_labels=False, linewidth=0.3,
-                                      linestyle='-',
-                                      zorder=20)
+                                      linestyle='-', zorder=20)
 
                 gl.ylocator = plt.MultipleLocator(20)
                 gl.xlocator = plt.MultipleLocator(60)
@@ -3460,7 +3169,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             ax.axis('off')
 
         else:
-
+            # Contour -------------------------------------------------------- #
             if data_ctn is not None:
                 if levels_ctn is None:
                     levels_ctn = levels.copy()
@@ -3471,8 +3180,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                         levels_ctn.remove(0)
                 except:
                     pass
-                aux_ctn = data_ctn.sel(plots=plot)
 
+                aux_ctn = data_ctn.sel(plots=plot)
                 if ((aux_ctn.mean().values != 0) and
                         (~np.isnan(aux_ctn.mean().values))):
 
@@ -3505,6 +3214,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             except:
                 aux_var = aux.values
 
+            # Contourf ------------------------------------------------------- #
             if ((aux.mean().values != 0) and
                     (~np.isnan(aux.mean().values))):
 
@@ -3520,12 +3230,10 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
 
                 ax.add_feature(cartopy.feature.LAND, facecolor='white',
                                linewidth=0.5)
-                #ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.2)
-                ax.coastlines(color='k', linestyle='-', alpha=1,
-                              linewidth=0.2, resolution='110m')
+                ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
+                              resolution='110m')
                 gl = ax.gridlines(draw_labels=False, linewidth=0.1,
-                                  linestyle='-',
-                                  zorder=20)
+                                  linestyle='-', zorder=20)
                 gl.ylocator = plt.MultipleLocator(20)
                 gl.xlocator = plt.MultipleLocator(60)
 
@@ -3537,12 +3245,12 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
 
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
+
     # cbar_pos = 'H'
     if cbar_pos.upper() == 'H':
         pos = fig.add_axes([0.261, 0, 0.5, 0.02])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
         cb.ax.tick_params(labelsize=4, pad=1)
-
         fig.subplots_adjust(bottom=0.05, wspace=0, hspace=0.25, left=0, right=1,
                             top=1)
 
@@ -3550,12 +3258,10 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
         pos = fig.add_axes([0.95, 0.2, 0.02, 0.5])
         cb = fig.colorbar(im, cax=pos, pad=0.1, orientation='vertical')
         cb.ax.tick_params(labelsize=4, pad=1)
-
-        fig.subplots_adjust(bottom=0, wspace=0.5, hspace=0.25, left=0.02, right=0.9,
-                            top=1)
+        fig.subplots_adjust(bottom=0, wspace=0.5, hspace=0.25, left=0.02,
+                            right=0.9, top=1)
     else:
         print(f"cbar_pos {cbar_pos} no valido")
-
 
     if save:
         if pdf:
@@ -3565,7 +3271,6 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
         plt.close()
     else:
         plt.show()
-
 
 
 def PlotFinal14(data, levels, cmap, titles, namefig, save, dpi, out_dir,
@@ -3586,13 +3291,11 @@ def PlotFinal14(data, levels, cmap, titles, namefig, save, dpi, out_dir,
                                subplot_kw={'projection': ccrs.PlateCarree(
                                    central_longitude=180)})
     axs0 = axs0.flatten()
-    #subfigs[0].suptitle('Positive Phase', fontsize=20)
 
     axs1 = subfigs[1].subplots(4, 3,
                                subplot_kw={'projection': ccrs.PlateCarree(
                                    central_longitude=180)})
     axs1 = axs1.flatten()
-    #subfigs[1].suptitle('Negative Phase', fontsize=20)
 
     axs = [axs0[0], axs0[1], axs0[2],
            axs1[0], axs1[1], axs1[2],
@@ -3603,17 +3306,12 @@ def PlotFinal14(data, levels, cmap, titles, namefig, save, dpi, out_dir,
            axs0[9], axs0[10], axs0[11],
            axs1[9], axs1[10], axs1[11]]
 
-    import string
     i2 = 0
     for i in plots:
-        # if i == 0 or i == 3 or i == 6 or i == 9 \
-        #         or i == 12 or i == 15 or i == 18 or i == 21:
         if i >= 0:
             if i in [0, 3]:
-
                 axs[i].text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
-                                           f"${variable[i]}$"
-                            ,
+                                           f"${variable[i]}$",
                             transform=axs[i].transAxes, size=6)
                 i2 += 1
             else:
@@ -3755,7 +3453,6 @@ def PlotFinal15_16(data, levels, cmap, titles, namefig, save, dpi, out_dir,
            axs0[6], axs0[7], axs0[8],
            axs1[6], axs1[7], axs1[8]]
 
-    import string
     i2 = 0
     for i in plots:
         axs[i].text(-0.005, 1.025, f"({string.ascii_lowercase[i2]})",
@@ -3856,7 +3553,7 @@ def PlotFinal15_16(data, levels, cmap, titles, namefig, save, dpi, out_dir,
 def PlotFinalFigS3(data, data_ctn, levels, cmap, title0, namefig, save, dpi,
                    out_dir, data2=None, levels2=None, cmap2=None,
                    data2_ctn=None, titles2=None, high=4, width = 7.08661):
-    import string
+
     crs_latlon = ccrs.PlateCarree()
 
     fig = plt.figure(figsize=(width, high), constrained_layout=True)
@@ -4009,11 +3706,12 @@ def PlotFinalFigS3(data, data_ctn, levels, cmap, title0, namefig, save, dpi,
         plt.close()
     else:
         plt.show()
+
 ################################################################################
-# PDF
+# PDF ##########################################################################
 def pdf_fit_normal(data, size, start, end):
     y, x = np.histogram(data)
-    x = (x + np.roll(x, -1))[:-1] / 2.0
+    #x = (x + np.roll(x, -1))[:-1] / 2.0
 
     #best_distributions = []
     # for distribution_name in ['norm']:
@@ -4059,10 +3757,8 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
 
     if variable == 'prec':
         fix_factor = 30
-        fix_rest = 0
     elif variable == 'tref':
         fix_factor = 1
-        fix_rest = 273
     else:
         fix_factor = 9.8
 
@@ -4071,7 +3767,6 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
         f'{cases_dir}{variable}_neutros_{season}_detrend_05.nc')
     neutro = neutro.rename({list(neutro.data_vars)[0]: 'var'})
     neutro = neutro * fix_factor
-    mask = MakeMask(neutro, 'var')
 
     resultados_regiones = {}
     for bl, bt, name in zip(box_lons, box_lats, box_name):
@@ -4098,13 +3793,13 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
         aux_resultados['clim'] = pdf_clim_full
 
         for c_count, c in enumerate(cases):
-            case = xr.open_dataset(f'{cases_dir}{variable}_{c}_{season}_detrend_05.nc')
+            case = xr.open_dataset(
+                f'{cases_dir}{variable}_{c}_{season}_detrend_05.nc')
             case = case.rename({list(case.data_vars)[0]: 'var'})
             case = case * fix_factor
             case = case.sel(lon=slice(bl[0], bl[1]), lat=slice(bt[0], bt[1]))
             case = case.mean(['lon', 'lat'])
 
-            # -
             case_anom = case - clim.mean('time')
             case_anom = np.nan_to_num(case_anom['var'].values)
 
@@ -4128,10 +3823,8 @@ def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
         1, 2, figsize=(width, high * 2),
         gridspec_kw={'wspace': 0.05, 'hspace': 0.01})
 
-
     for ax_count, (ax, cases, color_case) in enumerate(zip(
             axes.flatten(), selected_cases, colors_cases)):
-
         if ax_count == 1:
             ax.yaxis.tick_right()
 
@@ -4158,11 +3851,10 @@ def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
         plt.show()
 
 ################################################################################
-# Bins
+# Bins #########################################################################
 def SelectBins2D(serie, bins_limits):
 
     bins = []
-
     bins_limits = [[bins_limits[i], bins_limits[i+1]]
                    for i in range(len(bins_limits)-1)]
 
@@ -4195,7 +3887,8 @@ def SelectDatesBins(bins, bin_data, min_percentage=0.1):
                 ~np.isnan(aux.sst), drop=True)[bins_name_var]))
             bin_data_sel = bin_data.sel(r=r)
             dates_bins = aux.time[np.where(~np.isnan(aux[bins_name_var]))]
-            bin_data_sel = bin_data_sel.sel(time=bin_data_sel.time.isin(dates_bins))
+            bin_data_sel = bin_data_sel.sel(
+                time=bin_data_sel.time.isin(dates_bins))
             bins_r.append(bin_data_sel)
 
         bin_len.append(np.sum(bin_len_r))
@@ -4227,19 +3920,20 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
              ymin=-80, ymax=45, dpi=100, ylabel='Anomaly',
              bar_n_color=None, bar_n_error_color=None, bar_d_color=None,
              bar_d_error_color=None):
-    import matplotlib.pyplot as plt
 
     fig = plt.figure(1, figsize=(7, 7), dpi=dpi)
     ax = fig.add_subplot(111)
+
     plt.hlines(y=0, xmin=-4, xmax=4, color='k')
+
     ax.bar(x + 0.075, bin_n, color=bar_n_color, alpha=1, width=0.15,
            label='Niño3.4')
     ax.errorbar(x + 0.075, bin_n, yerr=bin_n_err, capsize=4, fmt='o', alpha=1,
                 elinewidth=0.9, ecolor=bar_n_error_color, mfc='w',
                 mec=bar_n_error_color, markersize=5)
+
     ax2 = ax.twinx()
-    ax2.bar(x + 0.075, bin_n_len, color=bar_n_color, alpha=0.5,
-            width=0.15)
+    ax2.bar(x + 0.075, bin_n_len, color=bar_n_color, alpha=0.5, width=0.15)
 
     ax.bar(x - 0.075, np.nan_to_num(bin_d), color=bar_d_color, alpha=1,
            width=0.15, label='DMI')
@@ -4251,14 +3945,11 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
     ax.legend(loc='upper left')
     ax.set_ylim(ymin, ymax)
     ax2.set_ylim(0, 3000)
-
     ax.set_ylabel(ylabel, fontsize=10)
     ax2.set_ylabel('number of samples', fontsize=10)
-
     ax.set_xlabel('SST index (of std)', fontsize=15)
     ax.xaxis.set_tick_params(labelsize=12)
     ax.grid(True)
-
     plt.title(title, fontsize=15)
     plt.xlim(-3.5, 3.5)
 
@@ -4269,7 +3960,7 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
         plt.show()
 
 ################################################################################
-# Bins 2D
+# Bins 2D ######################################################################
 def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
                color_thr, title, save=False, name_fig='fig', out_dir='~/',
                dpi=100, bin_limits=None):
@@ -4295,7 +3986,6 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
     xylimits=[-.5, -.5+len(bin_limits)]
     ax.set_xlim(xylimits[::-1])
     ax.set_ylim(xylimits)
-    #
 
     original_ticks = np.arange(-.5, -.5+len(bin_limits)+0.5)
     new_tickx=np.unique(bin_limits)
@@ -4318,6 +4008,7 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
     plt.colorbar(im, ticks=levels,
                  fraction=0.046, pad=0.04,
                  boundaries=levels)
+
     plt.tight_layout()
     if save:
         plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
@@ -4326,9 +4017,8 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
         plt.show()
 
 ################################################################################
+# SetBinsByCases ###############################################################
 def SetBinsByCases(indices, magnitudes, bin_limits, cases):
-
-    import numpy as np
 
     mt_dim = (len(magnitudes) * 2 + 1)
 
@@ -4364,8 +4054,6 @@ def SetBinsByCases(indices, magnitudes, bin_limits, cases):
                          f'{matriz_base[mt_dim // 2, :][j]}')
 
     cases_magnitude = matriz_base.flatten().tolist()
-
-    # listo cases_magnitude
 
     bins_limits_pos = []
     bins_limits_neg = []
@@ -4453,9 +4141,252 @@ def SetBinsByCases(indices, magnitudes, bin_limits, cases):
                     i2_aux_mag_name = ''
                     i2_aux_h = ''
                     aux_h = ''
+
                 i2_name = f"{i2_aux_mag_name}{i2_aux_h}{i2_aux_name}"
                 case_name = f"{i1_name}{aux_h}{i2_name}"
                 cases_names.append(case_name)
 
     return cases_names, cases_magnitude, \
         bins_by_cases_indice1, bins_by_cases_indice2
+
+################################################################################
+################################################################################
+
+# def ComputeFieldsByCases(v, v_name, fix_factor, snr,
+#                          levels_main, cbar_main, levels_clim, cbar_clim,
+#                          title_var, name_fig, dpi,
+#                          cases, bin_limits, bins_by_cases_dmi, bins_by_cases_n34,
+#                          cases_dir, dates_dir,
+#                          figsize=[16, 17], usemask=True, hcolorbar=False, save=True,
+#                          proj='eq', obsdates=False, out_dir='~/'):
+#     # no, una genialidad... -------------------------------------------------------------------------------------------#
+#     sec_plot = [13, 14, 10, 11,
+#                 7, 2, 22, 17,
+#                 8, 3, 9, 4,
+#                 20, 15, 21, 16,
+#                 5, 0, 6, 1,
+#                 23, 18, 24, 19]
+#     row_titles = ['Strong El Niño', None, None, None, None,
+#                   'Moderate El Niño', None, None, None, None,
+#                   'Neutro ENSO', None, None, None, None,
+#                   'Moderate La Niña', None, None, None, None,
+#                   'Strong La Niña', None, None, None, None]
+#     col_titles = ['Strong IOD - ', 'Moderate IOD - ', 'Neutro IOD', 'Moderate IOD + ', 'Strong IOD + ']
+#     num_neutros = [483, 585, 676, 673]
+#     porcentaje = 0.1
+#     # ------------------------------------------------------------------------------------------------------------------#
+#     print('Only SON')
+#     print('No climatology')
+#     mm = 10
+#     for s in ['SON']:
+#         n_check = []
+#         sec_count = 0
+#         # esto no tiene sentido
+#         # comp_case_clim = DetrendClim(data, mm, v_name=v_name)
+#
+#         crs_latlon = ccrs.PlateCarree()
+#         if proj == 'eq':
+#             fig, axs = plt.subplots(nrows=5, ncols=5,
+#                                     subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)},
+#                                     figsize=(figsize[0], figsize[1]))
+#         else:
+#             fig, axs = plt.subplots(nrows=5, ncols=5,
+#                                     subplot_kw={'projection': ccrs.SouthPolarStereo(central_longitude=200)},
+#                                     figsize=(figsize[0], figsize[1]))
+#         axs = axs.flatten()
+#         # Loop en los cases -{neutro} ---------------------------------------------------------------------------------#
+#         for c_count in [0, 1, 2, 3, 4, 5, 6, 7]:  # , 8]:
+#             cases_bin, num_bin, aux = BinsByCases(v=v, v_name=v_name, fix_factor=fix_factor,
+#                                                   s=s, mm=mm, c=cases[c_count], c_count=c_count,
+#                                                   bin_limits=bin_limits, bins_by_cases_dmi=bins_by_cases_dmi,
+#                                                   bins_by_cases_n34=bins_by_cases_n34, snr=snr,
+#                                                   cases_dir=cases_dir, dates_dir=dates_dir, obsdates=obsdates)
+#
+#             bins_aux_dmi = bins_by_cases_dmi[c_count]
+#             bins_aux_n34 = bins_by_cases_n34[c_count]
+#             for b_dmi in range(0, len(bins_aux_dmi)):
+#                 for b_n34 in range(0, len(bins_aux_n34)):
+#                     n = sec_plot[sec_count]
+#                     if proj != 'eq':
+#                         axs[n].set_extent([0, 360, -80, 20],
+#                                           ccrs.PlateCarree(central_longitude=200))
+#                     comp_case = cases_bin[b_dmi][b_n34]
+#
+#
+#                     # if v == 'prec' and s == 'JJA':
+#                     #
+#                     #     mask2 = regionmask.defined_regions.natural_earth_v5_0_0.countries_110.mask(comp_case_clim)
+#                     #     mask2 = xr.where(np.isnan(mask2), mask2, 1)
+#                     #     mask2 = mask2.to_dataset(name='prec')
+#                     #
+#                     #     dry_season_mask = comp_case_clim.where(comp_case_clim.prec>30)
+#                     #     dry_season_mask = xr.where(np.isnan(dry_season_mask), dry_season_mask, 1)
+#                     #     dry_season_mask *= mask2
+#                     #
+#                     #     if snr:
+#                     #         comp_case['var'] *= dry_season_mask.prec
+#                     #     else:
+#                     #         comp_case *= dry_season_mask.prec.values
+#
+#                     if usemask:
+#                         mask = regionmask.defined_regions.natural_earth_v5_0_0.countries_110.mask(aux)
+#                         mask = xr.where(np.isnan(mask), mask, 1)
+#                         comp_case *= mask
+#                     if snr:
+#                         comp_case = comp_case['var']
+#
+#                     if num_bin[b_dmi][b_n34] > num_neutros[mm - 7] * porcentaje:
+#                         im = axs[n].contourf(aux.lon, aux.lat, comp_case,
+#                                              levels=levels_main, transform=crs_latlon,
+#                                              cmap=cbar_main, extend='both')
+#
+#                         levels_contour = levels_main.copy()
+#                         if isinstance(levels_main, np.ndarray):
+#                             levels_contour = levels_main[levels_main != 0]
+#                         else:
+#                             levels_contour.remove(0)
+#
+#                         axs[n].contour(aux.lon, aux.lat, comp_case,
+#                                         levels=levels_contour,
+#                                         transform=crs_latlon,
+#                                         colors='k', linewidths=1)
+#
+#                         axs[n].add_feature(cartopy.feature.LAND, facecolor='lightgrey')
+#                         axs[n].add_feature(cartopy.feature.COASTLINE)
+#                         if proj == 'eq':
+#                             axs[n].gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', color='gray')
+#                             axs[n].set_xticks([])
+#                             axs[n].set_yticks([])
+#                             axs[n].set_extent([270,330,-60,20])
+#                             # axs[n].set_xticks(x_lon, crs=crs_latlon)
+#                             # axs[n].set_yticks(x_lat, crs=crs_latlon)
+#                             # lon_formatter = LongitudeFormatter(zero_direction_label=True)
+#                             # lat_formatter = LatitudeFormatter()
+#                             # axs[n].xaxis.set_major_formatter(lon_formatter)
+#                             # axs[n].yaxis.set_major_formatter(lat_formatter)
+#                         else:
+#                             # polar
+#                             gls = axs[n].gridlines(draw_labels=True, crs=crs_latlon, lw=0.3, color="gray",
+#                                                    y_inline=True, xlocs=range(-180, 180, 30),
+#                                                    ylocs=np.arange(-80, 20, 20))
+#                             r_extent = 1.2e7
+#                             axs[n].set_xlim(-r_extent, r_extent)
+#                             axs[n].set_ylim(-r_extent, r_extent)
+#                             circle_path = mpath.Path.unit_circle()
+#                             circle_path = mpath.Path(circle_path.vertices.copy() * r_extent,
+#                                                      circle_path.codes.copy())
+#                             axs[n].set_boundary(circle_path)
+#                             axs[n].set_frame_on(False)
+#                             plt.draw()
+#                             for ea in gls._labels:
+#                                 pos = ea[2].get_position()
+#                                 if (pos[0] == 150):
+#                                     ea[2].set_position([0, pos[1]])
+#
+#                         axs[n].tick_params(labelsize=0)
+#
+#                         if n == 0 or n == 1 or n == 2 or n == 3 or n == 4:
+#                             axs[n].set_title(col_titles[n], fontsize=15)
+#
+#                         if n == 0 or n == 5 or n == 10 or n == 15 or n == 20:
+#                             axs[n].set_ylabel(row_titles[n], fontsize=15)
+#
+#                         axs[n].xaxis.set_label_position('top')
+#                         axs[n].set_xlabel('N=' + str(num_bin[b_dmi][b_n34]), fontsize=12, loc='left', fontweight="bold")
+#
+#                     else:
+#                         n_check.append(n)
+#                         axs[n].axis('off')
+#
+#                     sec_count += 1
+#
+#         # subtitulos columnas de no ploteados -------------------------------------------------------------------------#
+#         for n_aux in [0, 1, 2, 3, 4]:
+#             if n_aux in n_check:
+#                 if n_aux + 5 in n_check:
+#                     axs[n_aux + 10].set_title(col_titles[n_aux], fontsize=15)
+#                 else:
+#                     axs[n_aux + 5].set_title(col_titles[n_aux], fontsize=15)
+#
+#         for n_aux in [0, 5, 10, 15, 20]:
+#             if n_aux in n_check:
+#                 if n_aux + 1 in n_check:
+#                     axs[n_aux + 2].set_ylabel(row_titles[n_aux], fontsize=15)
+#                 else:
+#                     axs[n_aux + 1].set_ylabel(row_titles[n_aux], fontsize=15)
+#
+#         # Climatologia = NADA en HGT ----------------------------------------------------------------------------------#
+#         # en el lugar del neutro -> climatología de la variable (data)
+#
+#         # if usemask:
+#         #     comp_case_clim = comp_case_clim[v_name] * fix_factor * mask
+#         # else:
+#         #     comp_case_clim = comp_case_clim[v_name] * fix_factor
+#
+#         # if v_name=='hgt':
+#         #     comp_case_clim = 0
+#
+#         aux0 = aux.sel(r=1, time='1982-10-01').drop(['r', 'L', 'time'])
+#         im2 = axs[12].contourf(aux.lon, aux.lat, aux0['var'][0, :, :],
+#                                levels=levels_clim, transform=crs_latlon, cmap=cbar_clim, extend='max')
+#         axs[12].set_extent([270, 330, -60, 20])
+#         # --------------------------------------------------------------------------------------------------------------#
+#         axs[12].add_feature(cartopy.feature.LAND, facecolor='grey')
+#         axs[12].add_feature(cartopy.feature.COASTLINE)
+#
+#         if v_name != 'hgt':
+#             cb = plt.colorbar(im2, fraction=0.042, pad=0.032, shrink=1, ax=axs[12], aspect=20)
+#             cb.ax.tick_params(labelsize=5)
+#
+#         if proj == 'eq':
+#             axs[12].gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', color='gray')
+#             axs[12].set_xticks([])
+#             axs[12].set_yticks([])
+#         else:
+#             # polar
+#             gls = axs[12].gridlines(draw_labels=True, crs=crs_latlon, lw=0.3, color="gray",
+#                                     y_inline=True, xlocs=range(-180, 180, 30), ylocs=np.arange(-80, 0, 20))
+#             r_extent = 1.2e7
+#             axs[12].set_xlim(-r_extent, r_extent)
+#             axs[12].set_ylim(-r_extent, r_extent)
+#             circle_path = mpath.Path.unit_circle()
+#             circle_path = mpath.Path(circle_path.vertices.copy() * r_extent,
+#                                      circle_path.codes.copy())
+#             axs[12].set_boundary(circle_path)
+#             axs[12].set_frame_on(False)
+#             axs[12].tick_params(labelsize=0)
+#             plt.draw()
+#             for ea in gls._labels:
+#                 pos = ea[2].get_position()
+#                 if (pos[0] == 150):
+#                     ea[2].set_position([0, pos[1]])
+#
+#         if hcolorbar:
+#             pos = fig.add_axes([0.2, 0.05, 0.6, 0.01])
+#             cbar = fig.colorbar(im, cax=pos, pad=0.1, orientation='horizontal')
+#         else:
+#             pos = fig.add_axes([0.90, 0.2, 0.012, 0.6])
+#             cbar = fig.colorbar(im, cax=pos, pad=0.1)
+#
+#         cbar.ax.tick_params(labelsize=18)
+#         if snr:
+#             fig.suptitle('Signal-to-Noise ratio:' + title_var + ' - ' + s, fontsize=20)
+#         else:
+#             fig.suptitle(title_var + ' - ' + s, fontsize=20)
+#         # fig.tight_layout() #BUG matplotlib 3.5.0 #Solucionado definitivamnete en 3.6 ?
+#         if hcolorbar:
+#             fig.subplots_adjust(top=0.93, bottom=0.07)
+#         else:
+#             fig.subplots_adjust(top=0.93)
+#         if save:
+#             if snr:
+#                 plt.savefig(out_dir + 'SNR_' + name_fig + '_' + s + '.jpg', bbox_inches='tight', dpi=dpi)
+#             else:
+#                 plt.savefig(out_dir + name_fig + '_' + s + '.jpg', bbox_inches='tight', dpi=dpi)
+#
+#             plt.close('all')
+#         else:
+#             plt.show()
+#         mm += 1
+################################################################################
+################################################################################
