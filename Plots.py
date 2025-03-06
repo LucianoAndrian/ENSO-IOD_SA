@@ -2,7 +2,7 @@
 Figuras ENSO-IOD-SA
 """
 # ---------------------------------------------------------------------------- #
-save = True
+save = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 # ---------------------------------------------------------------------------- #
 import os
@@ -24,7 +24,8 @@ warnings.filterwarnings("ignore")
 
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
-    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, SetBinsByCases
+    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, \
+    SetBinsByCases, AreaBetween
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -307,13 +308,19 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
     aux_v = SetDataToPlotFinal(regre_n34, regre_dmi, regre_n34_wodmi,
                                regre_dmi_won34)
 
+    if v == 'prec' or v == 'temp':
+        ocean_mask = True
+    else:
+        ocean_mask = False
+
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
               titles=subtitulos_regre, namefig=f'regre_{v}', map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=aux_v, levels_ctn=v_scale, color_ctn='k',
               data_ctn2=None, levels_ctn2=None,
               color_ctn2=None, high=3.1, width = 4,
-              sig_points=aux_sig, hatches='...', pdf=True)
+              sig_points=aux_sig, hatches='...', pdf=True,
+              ocean_mask=ocean_mask)
 
 print('Done Regression ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
@@ -730,7 +737,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    high=1.5, width=5.5,
                                    clim_plot_ctn=clim_hgt,
                                    clim_levels_ctn=np.linspace(1.1e5,1.2e5,11),
-                                   ocean_mask=False,
+                                   ocean_mask=True,
                                    data_ctn_no_ocean_mask=True,
                                    plot_step=1,
                                    cbar_pos='V')
@@ -750,7 +757,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    high=1.5, width=5.5,
                                    clim_plot_ctn=clim_hgt,
                                    clim_levels_ctn=np.linspace(1.1e5,1.2e5,11),
-                                   ocean_mask=False,
+                                   ocean_mask=True,
                                    data_ctn_no_ocean_mask=True,
                                    plot_step=1,
                                    cbar_pos='V')
@@ -768,7 +775,6 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
          'sim_pos', 'sim_neg', #sim misma fase
          'neutros', #neutros
-         # todos de cada caso para validación
          'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg',
          'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 
@@ -777,6 +783,22 @@ for v in ['tref', 'prec']:
     result = PDF_cases(variable=v, season='SON',
                        box_lons=box_lons, box_lats=box_lats, box_name=box_name,
                        cases=cases, cases_dir=cases_dir)
+
+    regiones_areas = {}
+    for k in result.keys():
+        aux = result[k]
+
+        areas = {}
+        for c in ['n34_puros_pos', 'dmi_puros_pos', 'sim_pos',
+                  'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']:
+
+            areas[c] = AreaBetween(aux['clim'], aux[c])
+
+        regiones_areas[k] = areas
+
+    df = pd.DataFrame(regiones_areas)
+    df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
+
 
     selected_cases = [['clim', 'n34_puros_pos', 'dmi_puros_pos', 'sim_pos'],
                       ['clim', 'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']]
@@ -790,10 +812,10 @@ print('Done CFSv2 PDFs ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 
 print(' Bins ---------------------------------------------------------------- ')
-bar_n_color = 'indianred'
-bar_n_error_color = 'indianred'
-bar_d_color = 'forestgreen'
-bar_d_error_color = 'forestgreen'
+bar_n_color = '#C685D1'
+bar_n_error_color = '#C685D1'
+bar_d_color = '#EDC45D'
+bar_d_error_color = '#EDC45D'
 s = 'SON'
 bins_limits = np.arange(-3.25, 3.25 + 0.5, 0.5)
 x = np.linspace(round(min(bins_limits)), round(max(bins_limits)),
@@ -851,13 +873,13 @@ for v in ['tref', 'prec']:
         region = region.mean(['lon', 'lat'])
 
         bins_n34_mean, bins_n34_std, bins_n34_len = \
-            SelectDatesBins(bins=bins_n34, bin_data=region, min_percentage=0.01)
+            SelectDatesBins(bins=bins_n34, bin_data=region, min_percentage=0.02)
         bins_dmi_mean, bins_dmi_std, bins_dmi_len = \
-            SelectDatesBins(bins=bins_dmi, bin_data=region, min_percentage=0.01)
+            SelectDatesBins(bins=bins_dmi, bin_data=region, min_percentage=0.02)
 
         PlotBars(x, bins_n34_mean, bins_n34_std, bins_n34_len,
                  bins_dmi_mean, bins_dmi_std, bins_dmi_len,
-                 title=f'{bn} - {v} anomaly \n (no se muestran <1% de casos)',
+                 title=f'{bn} - {v} anomaly \n (no se muestran <2% de casos)',
                  name_fig=f'bins_{bn}-{v}', out_dir=out_dir, save=save,
                  ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
                  bar_n_color=bar_n_color, bar_n_error_color=bar_n_error_color,
@@ -876,14 +898,12 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg',
         'neutros']
 
 indices = ['n34', 'dmi']
-magnitudes = ['ss', 's', 'm']
-bin_limits = [[-4.5, -2],  # 0 ss
-              [-2, -1],  # 1 s
-              [-1, -0.5],  # 2 m
-              [-0.5, 0.5],  # 3
-              [0.5, 1],  # 4  m
-              [1, 2],  # 5 s
-              [2, 4.5]]  # 6 ss
+magnitudes = ['s', 'm']
+bin_limits = [[-4.5,-1], #0 s
+              [-1, -0.5], #1 m
+              [-0.5, 0.5], #2 -
+              [0.5, 1], #3  m
+              [1, 4.5]] #4 s
 
 cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
     SetBinsByCases(indices, magnitudes, bin_limits, cases)

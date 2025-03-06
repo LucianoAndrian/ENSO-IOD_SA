@@ -24,6 +24,7 @@ import cartopy.crs as ccrs
 from scipy.signal import convolve2d
 import os
 import matplotlib.patches as mpatches
+from scipy.integrate import trapz
 
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import glob
@@ -3784,10 +3785,13 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
                 startend = -60
         else:
             startend = -2
+
+
+
         aux_clim = clim - clim.mean('time')
         aux_clim = np.nan_to_num(aux_clim['var'].values)
 
-        pdf_clim_full = pdf_fit_normal(aux_clim, len(aux_clim),
+        pdf_clim_full = pdf_fit_normal(aux_clim, 500,
                                        -1 * startend, startend)
 
         aux_resultados['clim'] = pdf_clim_full
@@ -3803,7 +3807,7 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
             case_anom = case - clim.mean('time')
             case_anom = np.nan_to_num(case_anom['var'].values)
 
-            pdf_case = pdf_fit_normal(case_anom, len(case_anom),
+            pdf_case = pdf_fit_normal(case_anom, 500,
                                       -startend,  startend)
 
             aux_resultados[c] = pdf_case
@@ -3849,6 +3853,30 @@ def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
         plt.close()
     else:
         plt.show()
+
+
+def AreaBetween(curva1: pd.Series, curva2: pd.Series) -> float:
+    """
+    Calcula el área entre dos curvas dadas como pandas.Series,
+
+    Parámetros:
+    curva1 : pd.Series -> Primera curva (índices = x, valores = densidad)
+    curva2 : pd.Series -> Segunda curva (índices = x, valores = densidad)
+
+    Retorna:
+    float -> Área entre las dos curvas
+    """
+    # Extraer valores x e y de cada curva
+    x = curva1.index.values
+    y1 = curva1.values
+    y2 = curva2.values
+
+    # Calcular el área entre curvas
+    area_between = trapz(np.abs(y1 - y2), x[::-1])
+    if area_between <0: # pasa por el orden de x
+        area_between = -1* area_between
+
+    return area_between
 
 ################################################################################
 # Bins #########################################################################
@@ -3933,14 +3961,14 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
                 mec=bar_n_error_color, markersize=5)
 
     ax2 = ax.twinx()
-    ax2.bar(x + 0.075, bin_n_len, color=bar_n_color, alpha=0.5, width=0.15)
+    ax2.bar(x + 0.075, bin_n_len, color=bar_n_color, alpha=0.7, width=0.15)
 
     ax.bar(x - 0.075, np.nan_to_num(bin_d), color=bar_d_color, alpha=1,
            width=0.15, label='DMI')
     ax.errorbar(x - 0.075, bin_d, yerr=bin_d_err, capsize=4, fmt='o', alpha=1,
                 elinewidth=0.9, ecolor=bar_d_error_color, mec=bar_d_error_color,
                 mfc='w', markersize=5)
-    ax2.bar(x - 0.075, bin_d_len, color=bar_d_color, alpha=0.5, width=0.15)
+    ax2.bar(x - 0.075, bin_d_len, color=bar_d_color, alpha=0.7, width=0.15)
 
     ax.legend(loc='upper left')
     ax.set_ylim(ymin, ymax)
