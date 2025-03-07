@@ -767,9 +767,9 @@ print(' --------------------------------------------------------------------- ')
 
 # ---------------------------------------------------------------------------- #
 print(' PDFs CFSv2 ---------------------------------------------------------- ')
-box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
-box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
-box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
+box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
+box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
 
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
@@ -798,14 +798,14 @@ for v in ['tref', 'prec']:
 
     df = pd.DataFrame(regiones_areas)
     df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
-
+    print(df)
 
     selected_cases = [['clim', 'n34_puros_pos', 'dmi_puros_pos', 'sim_pos'],
                       ['clim', 'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']]
 
     for k in result.keys():
         PlotPdfs(data=result[k], selected_cases=selected_cases,
-                 width=10, high=2.5, title=k, namefig=f'PDF_{v}_{k}',
+                 width=10, high=2.5, title=f'{v} - {k}', namefig=f'PDF_{v}_{k}',
                  out_dir=out_dir, save=save, dpi=dpi)
 
 print('Done CFSv2 PDFs ------------------------------------------------------ ')
@@ -831,9 +831,9 @@ data_dmi = (data_dmi - data_dmi.mean(['time', 'r'])) / \
 data_n34 = (data_n34 - data_n34.mean(['time', 'r'])) / \
            data_n34.std(['time', 'r'])
 
-box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
-box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
-box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
+box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
+box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
 
 for v in ['tref', 'prec']:
     print(v)
@@ -909,9 +909,9 @@ cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
     SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 print('Plot ----------------------------------------------------------------- ')
-box_name = ['S-SESA', 'N-SESA', 'NeB', 'Chile-Cuyo']# 'Patagonia']
-box_lats = [[-39,-25], [-29,-17], [-15,2], [-40,-30]]
-box_lons = [[296, 306], [305, 315], [311,325], [285,293]]#, [288,300]]
+box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
+box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
 
 for v, v_scale, v_cbar in zip(['prec', 'tref'],
                            [np.linspace(-15, 15, 13),

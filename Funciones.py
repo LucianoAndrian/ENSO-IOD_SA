@@ -1951,14 +1951,23 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         clim = Weights(
             xr.open_dataset(cases_dir + v + '_' + s.lower() +
                             end_nc_file).rename({v_name: 'var'}) * fix_factor)
+
+    ocean_mask = MakeMask(clim, list(clim.data_vars)[0])
+    clim = clim * ocean_mask
+
     try:
         case = Weights(
             xr.open_dataset(cases_dir + v + '_' + c + '_' + s.upper() +
                             end_nc_file).rename({v_name: 'var'}) * fix_factor)
+
+        ocean_mask = MakeMask(case, list(case.data_vars)[0])
+        case = case * ocean_mask
+
     except:
         print(f"case {c}, no encontrado para {v}")
         aux = clim.mean('time').__mul__(0)
         return aux, aux, aux
+
 
     if v == 'tref' or v == 'prec' or v == 'tsigma':
         lat = np.arange(-60, 20 + 1)
@@ -3769,6 +3778,9 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
     neutro = neutro.rename({list(neutro.data_vars)[0]: 'var'})
     neutro = neutro * fix_factor
 
+    mask_ocean = MakeMask(neutro, list(neutro.data_vars)[0])
+    neutro = neutro * mask_ocean
+
     resultados_regiones = {}
     for bl, bt, name in zip(box_lons, box_lats, box_name):
         aux_neutro = neutro.sel(lon=slice(bl[0], bl[1]),
@@ -3801,6 +3813,8 @@ def PDF_cases(variable, season, box_lons, box_lats, box_name,
                 f'{cases_dir}{variable}_{c}_{season}_detrend_05.nc')
             case = case.rename({list(case.data_vars)[0]: 'var'})
             case = case * fix_factor
+            mask_ocean = MakeMask(case, list(case.data_vars)[0])
+            case = case * mask_ocean
             case = case.sel(lon=slice(bl[0], bl[1]), lat=slice(bt[0], bt[1]))
             case = case.mean(['lon', 'lat'])
 
