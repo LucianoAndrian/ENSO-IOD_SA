@@ -83,6 +83,10 @@ scale_t = [-.6,-.4,-.2,-.1,-.05,0,0.05,0.1,0.2,0.4,0.6]
 
 scale_pp_val = [-60, -30, -10, -5, 0, 5, 10, 30, 60]
 scale_t_val = [-2,-.8,-.4,-.1, 0, .1, .4, .8, 2]
+
+# Pensando en x mensual.
+scale_t_val = [-3, -1, -0.5, -0.1, 0, 0.1, 0.5, 1, 3]
+scale_pp_val = [-60, -30, -15, -5, 0, 5, 15, 30, 60] # -2 -> 2 mm/day
 # Composite ------------------------------------------------------------------ #
 scale_hgt_comp = [-500, -300, -200, -100, -50, 0, 50, 100, 200, 300, 500]
 scale_t_comp = [-1.5, -1, -.5, -.25, -.1, 0, .1, .25, .5, 1, 1.5]
@@ -263,6 +267,24 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
               color_ctn2=None, high=3, width=7, num_cols=3, pdf=True,
               sig_points=aux_sig, hatches='...', ocean_mask=True)
 
+    # Diferencia OBS dif -CFSv2 dif
+    enso_obs_dif_interp = enso_obs_dif.interp(lon=enso_cfsv2_dif.lon.values,
+                                              lat=enso_cfsv2_dif.lat.values)
+
+    iod_obs_dif_interp = iod_obs_dif.interp(lon=iod_cfsv2_dif.lon.values,
+                                              lat=iod_cfsv2_dif.lat.values)
+
+    aux_v = SetDataToPlotFinal(enso_cfsv2_dif-enso_obs_dif_interp,
+                               iod_cfsv2_dif-iod_obs_dif_interp)
+
+    PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
+              titles=['', '', '', '', '', ''], namefig=f'dif_validation_{v}',
+              map='sa', save=save, dpi=dpi, out_dir=out_dir,
+              data_ctn=None, levels_ctn=v_scale, color_ctn='k',
+              data_ctn2=None, levels_ctn2=None,
+              color_ctn2=None, high=3.5, width=5, num_cols=2, pdf=True,
+              sig_points=None, hatches='...', ocean_mask=True)
+
 print('Done Validation ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 print('                                                                       ')
@@ -340,6 +362,7 @@ title_case = ['Pure positive IOD', 'Pure El Niño',  'El Niño - pos. IOD',
               'Pure negative IOD', 'Pure La Niña', 'La Niña - neg. IOD']
 
 aux_scales = [scale_t_comp, scale_pp_comp]
+#aux_scales = [scale_t_val, scale_pp_val]
 aux_cbar = [cbar, cbar_pp]
 
 variables_hgt = ['HGT200', 'HGT750']
@@ -423,6 +446,7 @@ print('                                                                       ')
 print('# CFSv2 Composite --------------------------------------------------- #')
 variables = ['tref', 'prec']
 aux_scales = [scale_t, scale_pp]
+#aux_scales = [scale_t_val, scale_pp_val]
 aux_cbar = [cbar, cbar_pp]
 aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
 
@@ -943,7 +967,8 @@ for v, v_scale, v_cbar in zip(['prec', 'tref'],
                 bins_by_cases_dmi=bins_by_cases_dmi,
                 bins_by_cases_n34=bins_by_cases_n34,
                 snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
-                neutro_clim=True, box=True, box_lat=bt, box_lon=bl)
+                neutro_clim=True, box=True, box_lat=bt, box_lon=bl,
+                ocean_mask=True)
 
             bins_aux_dmi = bins_by_cases_dmi[c_count]
             bins_aux_n34 = bins_by_cases_n34[c_count]
