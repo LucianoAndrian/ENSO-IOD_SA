@@ -1909,7 +1909,7 @@ def SelectBins(data, min, max, sd=1):
 def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
                 bin_limits, bins_by_cases_dmi, bins_by_cases_n34, dates_dir,
                 cases_dir, snr=False, neutro_clim=False, box=False, box_lat=[],
-                box_lon=[]):
+                box_lon=[], ocean_mask=False):
 
     def Weights(data):
         weights = np.transpose(
@@ -1952,16 +1952,18 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
             xr.open_dataset(cases_dir + v + '_' + s.lower() +
                             end_nc_file).rename({v_name: 'var'}) * fix_factor)
 
-    ocean_mask = MakeMask(clim, list(clim.data_vars)[0])
-    clim = clim * ocean_mask
+    if ocean_mask is True:
+        mask = MakeMask(clim, list(clim.data_vars)[0])
+        clim = clim * mask
 
     try:
         case = Weights(
             xr.open_dataset(cases_dir + v + '_' + c + '_' + s.upper() +
                             end_nc_file).rename({v_name: 'var'}) * fix_factor)
 
-        ocean_mask = MakeMask(case, list(case.data_vars)[0])
-        case = case * ocean_mask
+        if ocean_mask is True:
+            mask = MakeMask(case, list(case.data_vars)[0])
+            case = case * mask
 
     except:
         print(f"case {c}, no encontrado para {v}")
@@ -2573,15 +2575,19 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
     # mapa
     if map.upper() == 'HS':
         extent = [0, 359, -80, 20]
+        step_lon = 60
         high = high
     elif map.upper() == 'TR':
         extent = [45, 270, -20, 20]
+        step_lon = 60
         high = high
     elif map.upper() == 'HS_EX':
         extent = [0, 359, -65, -20]
+        step_lon = 60
         high = 2
     elif map.upper() == 'SA':
         extent = [275, 330, -60, 20]
+        step_lon = 20
         high = high
     else:
         print(f"Mapa {map} no seteado")
@@ -2762,7 +2768,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
                               zorder=20)
             gl.ylocator = plt.MultipleLocator(20)
-            ax.set_xticks(np.arange(0, 360, 60), crs=crs_latlon)
+            ax.set_xticks(np.arange(0, 360, step_lon), crs=crs_latlon)
             ax.set_yticks(np.arange(-80, 20, 20), crs=crs_latlon)
             ax.tick_params(width=0.5, pad=1)
             lon_formatter = LongitudeFormatter(zero_direction_label=True)
@@ -3049,20 +3055,24 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
         high = high
         xticks = np.arange(0, 360, 60)
         yticks = np.arange(-80, 20, 20)
+        lon_localator = 60
     elif map.upper() == 'TR':
         extent = [45, 270, -20, 20]
         high = high
         xticks = np.arange(0, 360, 60)
         np.arange(-80, 20, 20)
+        lon_localator = 60
     elif map.upper() == 'HS_EX':
         extent = [0, 359, -65, -20]
         high = high
         xticks = np.arange(0, 360, 60)
+        lon_localator = 60
     elif map.upper() == 'SA':
         extent = [270, 330, -60, 20]
         high = high
         yticks = np.arange(-60, 15+1, 20)
         xticks = np.arange(275, 330+1, 20)
+        lon_localator = 20
     else:
         print(f"Mapa {map} no seteado")
         return
@@ -3245,7 +3255,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                 gl = ax.gridlines(draw_labels=False, linewidth=0.1,
                                   linestyle='-', zorder=20)
                 gl.ylocator = plt.MultipleLocator(20)
-                gl.xlocator = plt.MultipleLocator(60)
+                gl.xlocator = plt.MultipleLocator(lon_localator)
 
             else:
                 remove_axes = True
