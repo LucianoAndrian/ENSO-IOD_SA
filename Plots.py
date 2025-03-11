@@ -78,8 +78,8 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
 # Regresion ------------------------------------------------------------------ #
 scale_hgt = [-300, -200, -100, -50, -25, 0, 25, 50, 100, 200, 300]
 scale_hgt_750 = [ -100, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100 ]
-scale_pp = np.linspace(-15, 15, 13)
-scale_t = [-.6,-.4,-.2,-.1,-.05,0,0.05,0.1,0.2,0.4,0.6]
+scale_pp = np.array([-45, -30, -20, -10, -2.5, 0, 2.5, 10, 20, 30, 45])
+scale_t = [-1, -0.8, -0.4, -0.2, -0.1, 0, 0.1, 0.2, 0.4, 0.8, 1]
 
 scale_pp_val = [-60, -30, -10, -5, 0, 5, 10, 30, 60]
 scale_t_val = [-2,-.8,-.4,-.1, 0, .1, .4, .8, 2]
@@ -330,20 +330,57 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
     aux_v = SetDataToPlotFinal(regre_n34, regre_dmi, regre_n34_wodmi,
                                regre_dmi_won34)
 
+    ocean_mask = False # prec y temp son solo sobre tierra
     if v == 'prec' or v == 'temp':
-        ocean_mask = True
+        add_hgt = True
+        data_ctn2_no_ocean_mask = True
     else:
-        ocean_mask = False
+        add_hgt = False
+        data_ctn2_no_ocean_mask = False
+
+    if add_hgt is True:
+        v = 'hgt750'
+        regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v}_regre_n34.nc')
+        regre_corr_n34 = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_n34_corr.nc')
+        regre_dmi = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_dmi.nc')
+        regre_corr_dmi = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_dmi_corr.nc')
+        regre_n34_wodmi = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_n34_wodmi.nc')
+        regre_corr_n34_wodmi = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_n34_wodmi_corr.nc')
+        regre_dmi_won34 = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_dmi_won34.nc')
+        regre_corr_dmi_won34 = xr.open_dataset(
+            f'{data_dir_proc}regre/{v}_regre_dmi_won34_corr.nc')
+
+        regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, regre_n34_wodmi, \
+            regre_corr_n34_wodmi, regre_dmi_won34, regre_corr_dmi_won34 = \
+            RenameDataset('var', regre_n34, regre_corr_n34, regre_dmi,
+                          regre_corr_dmi, regre_n34_wodmi, regre_corr_n34_wodmi,
+                          regre_dmi_won34, regre_corr_dmi_won34)
+
+        aux_hgt = SetDataToPlotFinal(regre_n34, regre_dmi, regre_n34_wodmi,
+                                     regre_dmi_won34)
+
+        data_ctn2 = aux_hgt
+        levels_ctn2 = scale_hgt_750
+    else:
+        data_ctn2 = None
+        levels_ctn2 = None
+
 
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
               titles=subtitulos_regre, namefig=f'regre_{v}', map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=aux_v, levels_ctn=v_scale, color_ctn='k',
-              data_ctn2=None, levels_ctn2=None,
-              color_ctn2=None, high=3.1, width = 4,
+              data_ctn=aux_v, levels_ctn=v_scale, color_ctn='gray',
+              data_ctn2=data_ctn2, levels_ctn2=levels_ctn2,
+              color_ctn2='k', high=3.1, width = 4,
               sig_points=aux_sig, hatches='...', pdf=True,
-              ocean_mask=ocean_mask)
-
+              ocean_mask=ocean_mask,
+              data_ctn2_no_ocean_mask=data_ctn2_no_ocean_mask)
 print('Done Regression ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 print('                                                                       ')
