@@ -339,22 +339,22 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
         data_ctn2_no_ocean_mask = False
 
     if add_hgt is True:
-        v = 'hgt750'
-        regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v}_regre_n34.nc')
+        v2 = 'hgt750'
+        regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v2}_regre_n34.nc')
         regre_corr_n34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_n34_corr.nc')
+            f'{data_dir_proc}regre/{v2}_regre_n34_corr.nc')
         regre_dmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_dmi.nc')
+            f'{data_dir_proc}regre/{v2}_regre_dmi.nc')
         regre_corr_dmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_dmi_corr.nc')
+            f'{data_dir_proc}regre/{v2}_regre_dmi_corr.nc')
         regre_n34_wodmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_n34_wodmi.nc')
+            f'{data_dir_proc}regre/{v2}_regre_n34_wodmi.nc')
         regre_corr_n34_wodmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_n34_wodmi_corr.nc')
+            f'{data_dir_proc}regre/{v2}_regre_n34_wodmi_corr.nc')
         regre_dmi_won34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_dmi_won34.nc')
+            f'{data_dir_proc}regre/{v2}_regre_dmi_won34.nc')
         regre_corr_dmi_won34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v}_regre_dmi_won34_corr.nc')
+            f'{data_dir_proc}regre/{v2}_regre_dmi_won34_corr.nc')
 
         regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, regre_n34_wodmi, \
             regre_corr_n34_wodmi, regre_dmi_won34, regre_corr_dmi_won34 = \
@@ -371,7 +371,6 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
         data_ctn2 = None
         levels_ctn2 = None
 
-
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
               titles=subtitulos_regre, namefig=f'regre_{v}', map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
@@ -384,7 +383,6 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
 print('Done Regression ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 print('                                                                       ')
-# ---------------------------------------------------------------------------- #
 
 print('# Obs. Composite ---------------------------------------------------- #')
 variables_tpp = ['tcru_w_c_d_0.25', 'ppgpcc_w_c_d_1']
@@ -398,7 +396,7 @@ cases = ['DMI_un_pos', 'N34_un_pos', 'DMI_sim_pos',
 title_case = ['Pure positive IOD', 'Pure El Niño',  'El Niño - pos. IOD',
               'Pure negative IOD', 'Pure La Niña', 'La Niña - neg. IOD']
 
-aux_scales = [scale_t_comp, scale_pp_comp]
+aux_scales = [scale_t, scale_pp]
 #aux_scales = [scale_t_val, scale_pp_val]
 aux_cbar = [cbar, cbar_pp]
 
