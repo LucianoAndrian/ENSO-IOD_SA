@@ -2763,8 +2763,12 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
 
             ax.add_feature(cartopy.feature.LAND, facecolor='white',
                            linewidth=0.5)
-            ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
+            ax.coastlines(color='k', linestyle='-', alpha=1,
+                          linewidth=0.2,
                           resolution='110m')
+            if map.upper() == 'SA':
+                ax.add_feature(cartopy.feature.BORDERS, alpha=1,
+                               linestyle='-', linewidth=0.2, color='k')
             gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
                               zorder=20)
             gl.ylocator = plt.MultipleLocator(20)

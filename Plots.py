@@ -77,7 +77,11 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
 # Scales and colorbars ------------------------------------------------------- #
 # Regresion ------------------------------------------------------------------ #
 scale_hgt = [-300, -200, -100, -50, -25, 0, 25, 50, 100, 200, 300]
-scale_hgt_750 = [ -100, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100 ]
+scale_hgt=[-300, -270, -240, -210, -180, -150, -120, -90, -60,
+ -30, 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300]
+
+scale_hgt_750 = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10, 0,
+                 10, 20, 30, 40, 50, 60 ,70 ,80 ,90, 100]
 scale_pp = np.array([-45, -30, -20, -10, -2.5, 0, 2.5, 10, 20, 30, 45])
 scale_t = [-1, -0.8, -0.4, -0.2, -0.1, 0, 0.1, 0.2, 0.4, 0.8, 1]
 
@@ -122,6 +126,30 @@ cbar = colors.ListedColormap(['#9B1C00', '#B9391B', '#CD4838', '#E25E55',
                               '#2064AF', '#014A9B'][::-1])
 cbar.set_over('#641B00')
 cbar.set_under('#012A52')
+cbar.set_bad(color='white')
+
+
+cbar = colors.ListedColormap(['#9B1C00', '#B9391B', '#CD4838', '#E25E55',
+                              '#F28C89', '#FFCECC',
+                              'white',
+                              '#B3DBFF', '#83B9EB', '#5E9AD7', '#3C7DC3',
+                              '#2064AF', '#014A9B'][::-1])
+cbar.set_over('#641B00')
+cbar.set_under('#012A52')
+cbar.set_bad(color='white')
+
+cbar = colors.ListedColormap([
+                                 '#641B00', '#892300', '#9B1C00', '#B9391B',
+                                 '#CD4838', '#E25E55',
+                                 '#F28C89', '#FFCECC', '#FFE6E6', 'white',
+                                 '#E6F2FF', '#B3DBFF',
+                                 '#83B9EB', '#5E9AD7', '#3C7DC3', '#2064AF',
+                                 '#014A9B', '#013A75',
+                                 '#012A52'
+                             ][::-1])
+
+cbar.set_over('#4A1500')
+cbar.set_under('#001F3F')
 cbar.set_bad(color='white')
 
 cbar_snr = colors.ListedColormap(['#070B4F','#2E07AC', '#387AE4' ,'#6FFE9B',
@@ -371,10 +399,15 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
         data_ctn2 = None
         levels_ctn2 = None
 
+    if v != 'prec' and v != 'temp':
+        data_ctn = aux_v
+    else:
+        data_ctn = None
+
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
               titles=subtitulos_regre, namefig=f'regre_{v}', map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=aux_v, levels_ctn=v_scale, color_ctn='gray',
+              data_ctn=data_ctn, levels_ctn=v_scale, color_ctn='k',
               data_ctn2=data_ctn2, levels_ctn2=levels_ctn2,
               color_ctn2='k', high=3.1, width = 4,
               sig_points=aux_sig, hatches='...', pdf=True,
