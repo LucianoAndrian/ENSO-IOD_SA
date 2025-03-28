@@ -519,7 +519,7 @@ aux_cbar = [cbar, cbar_pp]
 aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
 
 variables_hgt = ['hgt'] # vamos a necesitar otro nivel?
-aux_scales_hgt = [scale_hgt_comp_cfsv2]
+aux_scales_hgt = [scale_hgt]
 aux_cbar_hgt = [cbar]
 
 for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
@@ -595,22 +595,22 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
     PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
               titles=title_case, namefig=f"comp_snr_cfsv2_{v}", map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=aux_hgt, color_ctn='k',
+              data_ctn=None, color_ctn='k',
               high=3, width=7, num_cols=3,
               num_cases=True, num_cases_data=aux_num_cases,
-              levels_ctn=v_hgt_scale, ocean_mask=True,
+              levels_ctn=aux_scale_hgt, ocean_mask=True,
               data_ctn_no_ocean_mask=True)
 
     if v == variables[0]:
         # scale_hgt=[-150, -100, -50, -25, -10,
         # 10, 25, 50, 100, 150]
-        PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
-                  titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
-                  save=save, dpi=dpi, out_dir=out_dir,
-                  data_ctn=aux_hgt, color_ctn='k',
-                  high=3, width=7, num_cols=3,
-                  num_cases=True, num_cases_data=aux_num_cases,
-                  levels_ctn=scale_hgt, ocean_mask=False)
+        # PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
+        #           titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
+        #           save=save, dpi=dpi, out_dir=out_dir,
+        #           data_ctn=aux_hgt, color_ctn='k',
+        #           high=3, width=7, num_cols=3,
+        #           num_cases=True, num_cases_data=aux_num_cases,
+        #           levels_ctn=aux_scale_hgt, ocean_mask=False)
 
         PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
                   titles=title_case, namefig=f"comp_snr_cfsv2_hgt_{v}", map='sa',
@@ -655,14 +655,15 @@ cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
     SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 variables = ['tref', 'prec']
-aux_scales = [scale_t_comp, scale_pp_comp]
+aux_scales = [scale_t, scale_pp]
 aux_cbar = [cbar, cbar_pp]
 aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
 aux_scales_clim = [np.linspace(0,30,11), np.linspace(0, 300, 11)]
 aux_cbar_clim = ['OrRd', 'PuBu']
 
 variables_hgt = ['hgt'] # vamos a necesitar otro nivel?
-aux_scales_hgt = [scale_hgt_comp_cfsv2]
+aux_scale_hgt=[-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
+aux_scales_hgt = [aux_scale_hgt]
 aux_cbar_hgt = [cbar]
 
 print('Plot ----------------------------------------------------------------- ')
@@ -847,7 +848,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    clim_cbar=v_cbar_clim,
                                    clim_levels=v_scale_clim,
                                    high=1.5, width=5.5,
-                                   clim_plot_ctn=clim_hgt,
+                                   clim_plot_ctn=None,
                                    clim_levels_ctn=np.linspace(1.1e5,1.2e5,11),
                                    ocean_mask=True,
                                    data_ctn_no_ocean_mask=True,
