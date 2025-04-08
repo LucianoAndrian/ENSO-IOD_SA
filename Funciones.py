@@ -2560,7 +2560,8 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
               waf_step=None, waf_label=None, sig_points=None, hatches=None,
               num_cols=None, high=2, width = 7.08661, step=2, cbar_pos = 'H',
               num_cases=False, num_cases_data=None, pdf=False, ocean_mask=False,
-              data_ctn_no_ocean_mask=False, data_ctn2_no_ocean_mask=False):
+              data_ctn_no_ocean_mask=False, data_ctn2_no_ocean_mask=False,
+              pcolormesh=False):
 
     # cantidad de filas necesarias
     if num_cols is None:
@@ -2661,7 +2662,7 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                            levels=levels_ctn2, transform=crs_latlon,
                            colors=color_ctn2)
 
-        # CONTOURF ----------------------------------------------------------- #
+        # CONTOURF OR COLORMESH ---------------------------------------------- #
         aux = data.sel(plots=plot)
         if aux.mean().values != 0:
 
@@ -2673,10 +2674,20 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
                 aux_var = aux['var'].values
             except:
                 aux_var = aux.values
-            im = ax.contourf(aux.lon.values[::step], aux.lat.values[::step],
-                             aux_var[::step, ::step],
-                             levels=levels,
-                             transform=crs_latlon, cmap=cmap, extend='both')
+
+            if pcolormesh is True:
+                im = ax.pcolormesh(aux.lon.values[::step],
+                                   aux.lat.values[::step],
+                                   aux_var[::step, ::step],
+                                   vmin=np.min(levels), vmax=np.max(levels),
+                                   transform=crs_latlon, cmap=cmap)
+            else:
+                im = ax.contourf(aux.lon.values[::step], aux.lat.values[::step],
+                                 aux_var[::step, ::step],
+                                 levels=levels,
+                                 transform=crs_latlon, cmap=cmap, extend='both')
+
+
         else:
             ax.axis('off')
             no_plot=True
