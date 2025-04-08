@@ -4,6 +4,9 @@ Figuras ENSO-IOD-SA
 # ---------------------------------------------------------------------------- #
 save = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
+plot_bins = False
+plot_bins_2d = False
+plot_pdf = False
 # ---------------------------------------------------------------------------- #
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
@@ -25,7 +28,7 @@ warnings.filterwarnings("ignore")
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
     SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, \
-    SetBinsByCases, AreaBetween
+    SetBinsByCases, AreaBetween, PlotPDFTable
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -178,6 +181,16 @@ cbar_pp_11.set_under('#6A3D07')
 cbar_pp_11.set_over('#004C42')
 cbar_pp_11.set_bad(color='white')
 
+cbar_pp_19 = colors.ListedColormap([
+    '#001912',  '#003C30',  '#004C42',  '#0C7169',
+    '#3FA293',  '#79C8BC',  '#A1D7CD', '#CFE9E5', '#E8F4F2',
+    'white',
+    '#F6E7C8', '#F1DFB3', '#DCBC75', '#C89D4F',
+    '#B17B2C', '#995D13', '#7F470E', '#472705', '#2F1803'][::-1])
+
+cbar_pp_19.set_under('#230F02')
+cbar_pp_19.set_over('#0D2D25')
+cbar_pp_19.set_bad('white')
 
 cbar_ks = colors.ListedColormap(['#C2FAB6', '#FAC78F'])
 
@@ -861,7 +874,7 @@ print(' --------------------------------------------------------------------- ')
 # ---------------------------------------------------------------------------- #
 print(' PDFs CFSv2 ---------------------------------------------------------- ')
 box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-53, -37]]
 box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
 
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
@@ -871,7 +884,7 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg',
          'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 
-for v in ['tref', 'prec']:
+for v, v_cbar in zip(['tref', 'prec'], [cbar, cbar_pp_19]):
 
     result = PDF_cases(variable=v, season='SON',
                        box_lons=box_lons, box_lats=box_lats, box_name=box_name,
@@ -891,92 +904,108 @@ for v in ['tref', 'prec']:
 
     df = pd.DataFrame(regiones_areas)
     df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
-    print(df)
+    df.index = ['EN', 'IODp', 'EN-IODp', 'LN', 'IODn', 'LN-IODn']
+    PlotPDFTable(df, cmap=v_cbar, vmin=-1, vmax=1, title='',
+                 save=save, name_fig=f'pdf_table_{v}', out_dir=out_dir, dpi=dpi,
+                 color_thr=0.5)
 
     selected_cases = [['clim', 'n34_puros_pos', 'dmi_puros_pos', 'sim_pos'],
                       ['clim', 'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']]
-
-    for k in result.keys():
-        PlotPdfs(data=result[k], selected_cases=selected_cases,
-                 width=10, high=2.5, title=f'{v} - {k}', namefig=f'PDF_{v}_{k}',
-                 out_dir=out_dir, save=save, dpi=dpi)
+    if plot_pdf:
+        for k in result.keys():
+            PlotPdfs(data=result[k], selected_cases=selected_cases,
+                     width=10, high=2.5, title=f'{v} - {k}',
+                     namefig=f'PDF_{v}_{k}',
+                     out_dir=out_dir, save=save, dpi=dpi)
+    else:
+        print('PDF compute, no plot')
 
 print('Done CFSv2 PDFs ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 
 print(' Bins ---------------------------------------------------------------- ')
-bar_n_color = '#C685D1'
-bar_n_error_color = '#C685D1'
-bar_d_color = '#EDC45D'
-bar_d_error_color = '#EDC45D'
-s = 'SON'
-bins_limits = np.arange(-3.25, 3.25 + 0.5, 0.5)
-x = np.linspace(round(min(bins_limits)), round(max(bins_limits)),
-                len(bins_limits)-1)
+if plot_bins:
+    bar_n_color = '#C685D1'
+    bar_n_error_color = '#C685D1'
+    bar_d_color = '#EDC45D'
+    bar_d_error_color = '#EDC45D'
+    s = 'SON'
+    bins_limits = np.arange(-3.25, 3.25 + 0.5, 0.5)
+    x = np.linspace(round(min(bins_limits)), round(max(bins_limits)),
+                    len(bins_limits) - 1)
 
-# indices
-data_dmi = xr.open_dataset(dates_dir + 'DMI_' + s + '_Leads_r_CFSv2.nc')
-data_n34 = xr.open_dataset(dates_dir + 'N34_' + s + '_Leads_r_CFSv2.nc')
+    # indices
+    data_dmi = xr.open_dataset(dates_dir + 'DMI_' + s + '_Leads_r_CFSv2.nc')
+    data_n34 = xr.open_dataset(dates_dir + 'N34_' + s + '_Leads_r_CFSv2.nc')
 
-# normalizando por sd
-data_dmi = (data_dmi - data_dmi.mean(['time', 'r'])) / \
-           data_dmi.std(['time', 'r'])
-data_n34 = (data_n34 - data_n34.mean(['time', 'r'])) / \
-           data_n34.std(['time', 'r'])
+    # normalizando por sd
+    data_dmi = (data_dmi - data_dmi.mean(['time', 'r'])) / \
+               data_dmi.std(['time', 'r'])
+    data_n34 = (data_n34 - data_n34.mean(['time', 'r'])) / \
+               data_n34.std(['time', 'r'])
 
-box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
-box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
+    box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+    box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40, -30],
+                [-53, -37]]
+    box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
+                [287, 294]]
 
-for v in ['tref', 'prec']:
-    print(v)
-    if v == 'prec':
-        fix = 30
-        fix_clim = 0
-        ylabel = 'prec anomaly [mm/month]'
-        ymin=-80
-        ymax=40
-        remove_2011 = False
-    else:
-        fix = 1
-        fix_clim = 273
-        ylabel = 'tref anomaly [ºC/month]'
-        ymin=-2
-        ymax=1
-        remove_2011 = True # parche provisorio, hay algo mal en tref con 2011
+    for v in ['tref', 'prec']:
+        print(v)
+        if v == 'prec':
+            fix = 30
+            fix_clim = 0
+            ylabel = 'prec anomaly [mm/month]'
+            ymin = -80
+            ymax = 40
+            remove_2011 = False
+        else:
+            fix = 1
+            fix_clim = 273
+            ylabel = 'tref anomaly [ºC/month]'
+            ymin = -2
+            ymax = 1
+            remove_2011 = True  # parche provisorio, hay algo mal en tref con 2011
 
-    data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}_detrend.nc')
-    data *= fix
-    data = data - data.mean(['time', 'r']) # anom
-    mask = MakeMask(data, list(data.data_vars)[0]) # mask
-    data *= mask
-    if remove_2011:
-        print('PARCHE, arreglar!')
-        print('Removing 2011 data from data')
-        data = data.sel(time=data.time.dt.year != 2011)
+        data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}_detrend.nc')
+        data *= fix
+        data = data - data.mean(['time', 'r'])  # anom
+        mask = MakeMask(data, list(data.data_vars)[0])  # mask
+        data *= mask
+        if remove_2011:
+            print('PARCHE, arreglar!')
+            print('Removing 2011 data from data')
+            data = data.sel(time=data.time.dt.year != 2011)
 
-    bins_dmi = SelectBins2D(serie=data_dmi,
-                          bins_limits=bins_limits)
+        bins_dmi = SelectBins2D(serie=data_dmi,
+                                bins_limits=bins_limits)
 
-    bins_n34 = SelectBins2D(serie=data_n34,
-                          bins_limits=bins_limits)
+        bins_n34 = SelectBins2D(serie=data_n34,
+                                bins_limits=bins_limits)
 
-    for bn, bl, bt in zip(box_name, box_lons, box_lats):
-        region = data.sel(lat=slice(min(bt), max(bt)), lon=slice(bl[0], bl[1]))
-        region = region.mean(['lon', 'lat'])
+        for bn, bl, bt in zip(box_name, box_lons, box_lats):
+            region = data.sel(lat=slice(min(bt), max(bt)),
+                              lon=slice(bl[0], bl[1]))
+            region = region.mean(['lon', 'lat'])
 
-        bins_n34_mean, bins_n34_std, bins_n34_len = \
-            SelectDatesBins(bins=bins_n34, bin_data=region, min_percentage=0.02)
-        bins_dmi_mean, bins_dmi_std, bins_dmi_len = \
-            SelectDatesBins(bins=bins_dmi, bin_data=region, min_percentage=0.02)
+            bins_n34_mean, bins_n34_std, bins_n34_len = \
+                SelectDatesBins(bins=bins_n34, bin_data=region,
+                                min_percentage=0.02)
+            bins_dmi_mean, bins_dmi_std, bins_dmi_len = \
+                SelectDatesBins(bins=bins_dmi, bin_data=region,
+                                min_percentage=0.02)
 
-        PlotBars(x, bins_n34_mean, bins_n34_std, bins_n34_len,
-                 bins_dmi_mean, bins_dmi_std, bins_dmi_len,
-                 title=f'{bn} - {v} anomaly \n (no se muestran <2% de casos)',
-                 name_fig=f'bins_{bn}-{v}', out_dir=out_dir, save=save,
-                 ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
-                 bar_n_color=bar_n_color, bar_n_error_color=bar_n_error_color,
-                 bar_d_color=bar_d_color, bar_d_error_color=bar_d_error_color)
+            PlotBars(x, bins_n34_mean, bins_n34_std, bins_n34_len,
+                     bins_dmi_mean, bins_dmi_std, bins_dmi_len,
+                     title=f'{bn} - {v} anomaly \n (no se muestran <2% de casos)',
+                     name_fig=f'bins_{bn}-{v}', out_dir=out_dir, save=save,
+                     ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
+                     bar_n_color=bar_n_color,
+                     bar_n_error_color=bar_n_error_color,
+                     bar_d_color=bar_d_color,
+                     bar_d_error_color=bar_d_error_color)
+else:
+    print('Bins no plot')
 
 print(' Done Bins ----------------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
@@ -984,98 +1013,111 @@ print(' --------------------------------------------------------------------- ')
 # ---------------------------------------------------------------------------- #
 print(' Bins 2D ------------------------------------------------------------- ')
 
-cases = ['dmi_puros_pos', 'dmi_puros_neg',
-        'n34_puros_pos', 'n34_puros_neg',
-        'sim_pos', 'sim_neg',
-        'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
-        'neutros']
+if plot_bins_2d:
+    cases = ['dmi_puros_pos', 'dmi_puros_neg',
+             'n34_puros_pos', 'n34_puros_neg',
+             'sim_pos', 'sim_neg',
+             'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+             'neutros']
 
-indices = ['n34', 'dmi']
-magnitudes = ['s', 'm']
-bin_limits = [[-4.5,-1], #0 s
-              [-1, -0.5], #1 m
-              [-0.5, 0.5], #2 -
-              [0.5, 1], #3  m
-              [1, 4.5]] #4 s
+    indices = ['n34', 'dmi']
+    magnitudes = ['s', 'm']
+    bin_limits = [[-4.5, -1],  # 0 s
+                  [-1, -0.5],  # 1 m
+                  [-0.5, 0.5],  # 2 -
+                  [0.5, 1],  # 3  m
+                  [1, 4.5]]  # 4 s
 
-cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
-    SetBinsByCases(indices, magnitudes, bin_limits, cases)
+    cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
+        SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
-print('Plot ----------------------------------------------------------------- ')
-box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-73, -37]]
-box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
+    print(
+        'Plot ----------------------------------------------------------------- ')
+    box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+    box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40, -30],
+                [-53, -37]]
+    box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
+                [287, 294]]
 
-for v, v_scale, v_cbar in zip(['prec', 'tref'],
-                           [np.linspace(-15, 15, 13),
-                            np.linspace(-1, 1, 13)],
-                           ['BrBG', 'RdBu_r']):
+    for v, v_scale, v_cbar in zip(['prec', 'tref'],
+                                  [np.linspace(-15, 15, 13),
+                                   np.linspace(-1, 1, 13)],
+                                  ['BrBG', 'RdBu_r']):
 
-    if v == 'prec':
-        fix = 30
-        fix_clim = 0
-        color_thr = 8
-        units = '[mm/month]'
-    else:
-        fix = 1
-        fix_clim = 273
-        color_thr = 1
-        units = '[ºC]'
+        if v == 'prec':
+            fix = 30
+            fix_clim = 0
+            color_thr = 8
+            units = '[mm/month]'
+        else:
+            fix = 1
+            fix_clim = 273
+            color_thr = 1
+            units = '[ºC]'
 
-    for bt, bl, bn in zip(box_lats, box_lons, box_name):
-        aux_comps = {}
-        aux_num_comps = {}
-        n_count = 0
+        for bt, bl, bn in zip(box_lats, box_lons, box_name):
+            aux_comps = {}
+            aux_num_comps = {}
+            n_count = 0
 
-        for c_count, c in enumerate(cases):
-            print('comp ----------------------------------------------------- ')
-            cases_bin, num_bin, auxx = BinsByCases(
-                v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
-                c_count=c_count,
-                bin_limits=bin_limits,
-                bins_by_cases_dmi=bins_by_cases_dmi,
-                bins_by_cases_n34=bins_by_cases_n34,
-                snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
-                neutro_clim=True, box=True, box_lat=bt, box_lon=bl,
-                ocean_mask=True)
+            for c_count, c in enumerate(cases):
+                print(
+                    'comp ----------------------------------------------------- ')
+                cases_bin, num_bin, auxx = BinsByCases(
+                    v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
+                    c_count=c_count,
+                    bin_limits=bin_limits,
+                    bins_by_cases_dmi=bins_by_cases_dmi,
+                    bins_by_cases_n34=bins_by_cases_n34,
+                    snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
+                    neutro_clim=True, box=True, box_lat=bt, box_lon=bl,
+                    ocean_mask=True)
 
-            bins_aux_dmi = bins_by_cases_dmi[c_count]
-            bins_aux_n34 = bins_by_cases_n34[c_count]
+                bins_aux_dmi = bins_by_cases_dmi[c_count]
+                bins_aux_n34 = bins_by_cases_n34[c_count]
 
-            for b_n34 in range(0, len(bins_aux_n34)):
-                for b_dmi in range(0, len(bins_aux_dmi)):
-                    aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
-                    aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
-                    n_count += 1
+                for b_n34 in range(0, len(bins_aux_n34)):
+                    for b_dmi in range(0, len(bins_aux_dmi)):
+                        aux_comps[cases_names[n_count]] = cases_bin[b_dmi][
+                            b_n34]
+                        aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][
+                            b_n34]
+                        n_count += 1
 
-        aux_num = []
-        cases_ordenados = []
-        num_ordenados = []
-        for c in cases_magnitude:
-            try:
-                aux = aux_comps[c]
-                aux_num.append(aux_num_comps[c])
-            except:
-                aux = aux_comps[cases_magnitude[4]] * 0
-                aux_num.append(np.nan)
+            aux_num = []
+            cases_ordenados = []
+            num_ordenados = []
+            for c in cases_magnitude:
+                try:
+                    aux = aux_comps[c]
+                    aux_num.append(aux_num_comps[c])
+                except:
+                    aux = aux_comps[cases_magnitude[4]] * 0
+                    aux_num.append(np.nan)
 
-            da = xr.DataArray(aux, name="var")
-            cases_ordenados.append(da)
+                da = xr.DataArray(aux, name="var")
+                cases_ordenados.append(da)
 
-        cases_ordenados = np.array(cases_ordenados).\
-            reshape(len(bin_limits), len(bin_limits))
-        num_ordenados = np.array(aux_num).\
-            reshape(len(bin_limits), len(bin_limits))
+            cases_ordenados = np.array(cases_ordenados). \
+                reshape(len(bin_limits), len(bin_limits))
+            num_ordenados = np.array(aux_num). \
+                reshape(len(bin_limits), len(bin_limits))
 
-        PlotBins2D(cases_ordenados, num_ordenados,
-                   vmin=min(v_scale), vmax=max(v_scale),
-                   levels=v_scale, cmap=v_cbar,
-                   color_thr=color_thr,
-                   title=f'{v} {units} - {bn}',
-                   save=save, name_fig=f'{v}_bins2d_{bn}',
-                   out_dir=out_dir, dpi=dpi,
-                   bin_limits=bin_limits)
+            PlotBins2D(cases_ordenados, num_ordenados,
+                       vmin=min(v_scale), vmax=max(v_scale),
+                       levels=v_scale, cmap=v_cbar,
+                       color_thr=color_thr,
+                       title=f'{v} {units} - {bn}',
+                       save=save, name_fig=f'{v}_bins2d_{bn}',
+                       out_dir=out_dir, dpi=dpi,
+                       bin_limits=bin_limits)
+else:
+    print('Bins 2D no plot')
+
 print(' Done Bins 2D -------------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
 
 ################################################################################
+
+
+

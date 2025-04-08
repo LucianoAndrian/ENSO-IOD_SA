@@ -3899,13 +3899,57 @@ def AreaBetween(curva1: pd.Series, curva2: pd.Series) -> float:
     y1 = curva1.values
     y2 = curva2.values
 
+    max1 = curva1.idxmax()
+    max2 = curva2.idxmax()
+    sign = -1*(max1-max2)/abs(max1-max2)
+
     # Calcular el área entre curvas
     area_between = trapz(np.abs(y1 - y2), x[::-1])
     if area_between <0: # pasa por el orden de x
         area_between = -1* area_between
 
-    return area_between
+    return area_between*sign
 
+def PlotPDFTable(df, cmap, vmin, vmax, title, name_fig='fig',
+                 save=False, out_dir='~/', dpi=100, color_thr=0.4):
+
+    fig = plt.figure(dpi=dpi, figsize=(8, 4))
+    ax = fig.add_subplot(111)
+    im = ax.imshow(df, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
+
+    data_array = df.values
+    for i in range(data_array.shape[0]):
+        for j in range(data_array.shape[1]):
+            if np.abs(data_array[i, j]) > color_thr:
+                color_num = 'white'
+            else:
+                color_num = 'k'
+            ax.text(j, i, f"{data_array[i, j]:.2f}", ha='center', va='center',
+                    color=color_num)
+
+    # Ticks principales en el centro de las celdas (para los labels)
+    ax.set_xticks(np.arange(df.shape[1]))
+    ax.set_xticklabels(df.columns, rotation=0, ha='center')
+
+    ax.set_yticks(np.arange(df.shape[0]))
+    ax.set_yticklabels(df.index)
+
+    ax.set_xticks(np.arange(-0.5, df.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, df.shape[0], 1), minor=True)
+
+    ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
+    ax.tick_params(which='minor', bottom=False, left=False)
+
+    fig.suptitle(title, size=12)
+
+    ax.margins(0)
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 ################################################################################
 # Bins #########################################################################
 def SelectBins2D(serie, bins_limits):
