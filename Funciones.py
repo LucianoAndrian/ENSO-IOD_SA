@@ -3912,6 +3912,60 @@ def AreaBetween(curva1: pd.Series, curva2: pd.Series) -> float:
 
     max1 = curva1.idxmax()
     max2 = curva2.idxmax()
+
+    sign = -1*np.sign(max1 - max2)
+    if sign == 0:
+        sign = 1
+    # Calcular el área entre curvas
+    area_between = trapz(np.abs(y1 - y2), x)
+    if area_between <0: # pasa por el orden de x
+        area_between = -1* area_between
+
+    return area_between*sign
+
+def AreaDiferencial(curva1: pd.Series, curva2: pd.Series):
+    """
+    Calcula el área entre dos curvas, separando el área donde curva2 está por encima
+    de curva1 y viceversa.
+
+    Parámetros:
+    curva1 : pd.Series -> Primera curva (índices = x, valores = densidad)
+    curva2 : pd.Series -> Segunda curva (índices = x, valores = densidad)
+
+    Retorna:
+    (area_superior, area_inferior) : tuple[float, float]
+        area_superior: área donde curva2 > curva1
+        area_inferior: área donde curva2 < curva1
+    """
+    x = curva1.index.values
+    y1 = curva1.values
+    y2 = curva2.values
+
+    diff = y2 - y1
+
+    area_superior = trapz(np.where(diff > 0, diff, 0), x[::-1])
+    area_inferior = trapz(np.where(diff < 0, -diff, 0), x[::-1])  # usar -diff para que sea positiva
+
+    return area_superior, area_inferior
+
+def AreaBetween0(curva1: pd.Series, curva2: pd.Series) -> float:
+    """
+    Calcula el área entre dos curvas dadas como pandas.Series,
+
+    Parámetros:
+    curva1 : pd.Series -> Primera curva (índices = x, valores = densidad)
+    curva2 : pd.Series -> Segunda curva (índices = x, valores = densidad)
+
+    Retorna:
+    float -> Área entre las dos curvas
+    """
+    # Extraer valores x e y de cada curva
+    x = curva1.index.values
+    y1 = curva1.values
+    y2 = curva2.values
+
+    max1 = curva1.idxmax()
+    max2 = curva2.idxmax()
     sign = -1*(max1-max2)/abs(max1-max2)
 
     # Calcular el área entre curvas
@@ -3920,6 +3974,19 @@ def AreaBetween(curva1: pd.Series, curva2: pd.Series) -> float:
         area_between = -1* area_between
 
     return area_between*sign
+
+def hellinger_distance(p: pd.Series, q: pd.Series):
+    """
+    Calcula la distancia de Hellinger entre dos distribuciones de probabilidad (Series normalizadas).
+    """
+    return np.sqrt(0.5 * np.sum((np.sqrt(p.values) - np.sqrt(q.values))**2))
+
+from scipy.spatial.distance import jensenshannon
+
+def js_divergence(p: pd.Series, q: pd.Series) -> float:
+    p_norm = p / trapz(p.values, p.index.values)
+    q_norm = q / trapz(q.values, q.index.values)
+    return jensenshannon(p_norm, q_norm, base=2)**2
 
 def PlotPDFTable(df, cmap, vmin, vmax, title, name_fig='fig',
                  save=False, out_dir='~/', dpi=100, color_thr=0.4):
@@ -4260,6 +4327,16 @@ def SetBinsByCases(indices, magnitudes, bin_limits, cases):
     return cases_names, cases_magnitude, \
         bins_by_cases_indice1, bins_by_cases_indice2
 
+
+
+def SameDateAs(data, datadate):
+    """
+    En data selecciona las mismas fechas que datadate
+    :param data:
+    :param datadate:
+    :return:
+    """
+    return data.sel(time=datadate.time.values)
 ################################################################################
 ################################################################################
 
