@@ -57,6 +57,8 @@ nc_date_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
 
 sig_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/nc_quantiles/' \
           'DMIbase/' # resultados de MC
+cfsv2_sig_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
+                'CFSv2_nc_quantiles/' # resultados de MC
 
 data_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1940_2020/'
 
@@ -559,11 +561,16 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
         aux_hgt = []
         aux_hgt_snr = []
         aux_num_cases = []
+        aux_var_sig = []
 
         for c in cases_cfsv2:
             case = xr.open_dataset(f'{cases_dir}{v}_{c}_SON_detrend_05.nc')
             case = case.rename({list(case.data_vars)[0]: 'var'})
             case = case*fix
+
+            case_sig = xr.open_dataset(
+                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc')*fix
+
 
             case_hgt = xr.open_dataset(f'{cases_dir}{v_hgt}_{c}_SON_05.nc')
             case_hgt = case_hgt.rename({list(case_hgt.data_vars)[0]: 'var'})
@@ -575,6 +582,10 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
 
             comp = case.mean('time') - data_neutro.mean('time')
             comp_hgt = case_hgt.mean('time') - neutro_hgt.mean('time')
+
+            sig = comp.where((comp < case_sig[v][0]) |
+                             (comp > case_sig[v][1]))
+            sig = sig.where(np.isnan(sig['var']), 1)
 
             aux_spread = case - comp
             aux_spread = aux_spread.std('time')
@@ -588,12 +599,15 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
             aux_data_snr.append(snr)
             aux_hgt.append(comp_hgt)
             aux_hgt_snr.append(snr_hgt)
+            aux_var_sig.append(sig)
 
         aux_hgt = xr.concat(aux_hgt, dim='plots')
         aux_hgt_snr = xr.concat(aux_hgt_snr, dim='plots')
 
         aux_data = xr.concat(aux_data, dim='plots')
         aux_data_snr = xr.concat(aux_data_snr, dim='plots')
+
+        aux_var_sig = xr.concat(aux_var_sig, dim='plots')
 
     aux_scale_hgt=[-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
     PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
@@ -603,7 +617,8 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
               high=3, width=7, num_cols=3,
               num_cases=True, num_cases_data=aux_num_cases,
               levels_ctn=aux_scale_hgt, ocean_mask=True,
-              data_ctn_no_ocean_mask=True)
+              data_ctn_no_ocean_mask=True,
+              sig_points=aux_var_sig, hatches='...')
 
     PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
               titles=title_case, namefig=f"comp_snr_cfsv2_{v}", map='sa',
@@ -614,24 +629,24 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
               levels_ctn=aux_scale_hgt, ocean_mask=True,
               data_ctn_no_ocean_mask=True)
 
-    if v == variables[0]:
-        # scale_hgt=[-150, -100, -50, -25, -10,
-        # 10, 25, 50, 100, 150]
-        # PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
-        #           titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
-        #           save=save, dpi=dpi, out_dir=out_dir,
-        #           data_ctn=aux_hgt, color_ctn='k',
-        #           high=3, width=7, num_cols=3,
-        #           num_cases=True, num_cases_data=aux_num_cases,
-        #           levels_ctn=aux_scale_hgt, ocean_mask=False)
-
-        PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
-                  titles=title_case, namefig=f"comp_snr_cfsv2_hgt_{v}", map='sa',
-                  save=save, dpi=dpi, out_dir=out_dir,
-                  data_ctn=aux_hgt_snr, color_ctn='k',
-                  high=3, width=7, num_cols=3,
-                  num_cases=True, num_cases_data=aux_num_cases,
-                  levels_ctn=scale_snr, ocean_mask=False)
+    # if v == variables[0]:
+    #     # scale_hgt=[-150, -100, -50, -25, -10,
+    #     # 10, 25, 50, 100, 150]
+    #     # PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
+    #     #           titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
+    #     #           save=save, dpi=dpi, out_dir=out_dir,
+    #     #           data_ctn=aux_hgt, color_ctn='k',
+    #     #           high=3, width=7, num_cols=3,
+    #     #           num_cases=True, num_cases_data=aux_num_cases,
+    #     #           levels_ctn=aux_scale_hgt, ocean_mask=False)
+    #
+    #     PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
+    #               titles=title_case, namefig=f"comp_snr_cfsv2_hgt_{v}", map='sa',
+    #               save=save, dpi=dpi, out_dir=out_dir,
+    #               data_ctn=aux_hgt_snr, color_ctn='k',
+    #               high=3, width=7, num_cols=3,
+    #               num_cases=True, num_cases_data=aux_num_cases,
+    #               levels_ctn=scale_snr, ocean_mask=False)
 
 print('Done CFSv2 Composite ------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
@@ -874,8 +889,8 @@ print(' --------------------------------------------------------------------- ')
 # ---------------------------------------------------------------------------- #
 print(' PDFs CFSv2 ---------------------------------------------------------- ')
 box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-53, -37]]
-box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 294]]
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40]]
+box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295]]
 
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
@@ -905,7 +920,7 @@ for v, v_cbar in zip(['tref', 'prec'], [cbar, cbar_pp_19]):
     df = pd.DataFrame(regiones_areas)
     df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
     df.index = ['EN', 'IODp', 'EN-IODp', 'LN', 'IODn', 'LN-IODn']
-    PlotPDFTable(df, cmap=v_cbar, vmin=-1, vmax=1, title='',
+    PlotPDFTable(df.transpose(), cmap=v_cbar, vmin=-1, vmax=1, title='',
                  save=save, name_fig=f'pdf_table_{v}', out_dir=out_dir, dpi=dpi,
                  color_thr=0.5)
 
