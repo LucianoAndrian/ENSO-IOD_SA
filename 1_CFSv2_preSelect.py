@@ -12,6 +12,7 @@ out_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
 save_nc = True
 variables = ['hgt', 'tref', 'prec']#, 'T0995sigma']
 variables = ['tref', 'prec']
+variables = ['hgt750']
 # Funciones ------------------------------------------------------------------ #
 def fix_calendar(ds, timevar='time'):
     """
@@ -143,10 +144,14 @@ def Anom_Detrend_SeasonRealTime(data_realtime, season_clim_1999_2011,
 
     return season_anom_detrend
 
-def SetDataCFSv2(data):
+def SetDataCFSv2(data, sa=True):
     data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-    data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24),
-                    lon=slice(275, 331), lat=slice(-70, 20))
+    if sa:
+        data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24),
+                        lon=slice(275, 331), lat=slice(-70, 20))
+    else:
+        data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24))
+
     data['L'] = [0, 1, 2, 3]
     data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
 
@@ -167,12 +172,17 @@ def SplitFilesByMonotonicity(files):
 for v in variables:
     print(f"{v} ------------------------------------------------------------ #")
 
-    if v == 'T0995sigma' or v == 'hgt':
+    if v == 'T0995sigma' or v == 'hgt' or v=='hgt750':
         dir_hc = '/pikachu/datos/luciano.andrian/hindcast/'
         dir_rt = '/pikachu/datos/luciano.andrian/real_time/'
     else:
         dir_hc = '/pikachu/datos/osman/nmme/monthly/hindcast/'
         dir_rt = '/pikachu/datos/osman/nmme/monthly/real_time/'
+
+    if v=='hgt750':
+        sa=False
+    else:
+        sa=True
     # usando SelectNMMEFiles con All=True,
     # abre TODOS los archivos .nc de la ruta en dir
 
@@ -188,7 +198,7 @@ for v in variables:
     # Open files --------------------------------------------------------- #
     try:
         data = xr.open_mfdataset(files, decode_times=False)
-        data = SetDataCFSv2(data)
+        data = SetDataCFSv2(data, sa)
 
     except:
         print('Error en la monotonia de la dimencion S')
@@ -198,8 +208,8 @@ for v in variables:
         data0 = xr.open_mfdataset(files0, decode_times=False)
         data1 = xr.open_mfdataset(files1, decode_times=False)
 
-        data0 = SetDataCFSv2(data0)
-        data1 = SetDataCFSv2(data1)
+        data0 = SetDataCFSv2(data0, sa)
+        data1 = SetDataCFSv2(data1, sa)
 
         data = xr.concat([data0, data1], dim='time')
 
@@ -247,7 +257,7 @@ for v in variables:
     # Open files --------------------------------------------------------- #
     try:
         data = xr.open_mfdataset(files, decode_times=False)
-        data = SetDataCFSv2(data)
+        data = SetDataCFSv2(data, sa)
 
     except:
         print('Error en la monotonia de la dimencion S')
@@ -257,8 +267,8 @@ for v in variables:
         data0 = xr.open_mfdataset(files0, decode_times=False)
         data1 = xr.open_mfdataset(files1, decode_times=False)
 
-        data0 = SetDataCFSv2(data0)
-        data1 = SetDataCFSv2(data1)
+        data0 = SetDataCFSv2(data0, sa)
+        data1 = SetDataCFSv2(data1, sa)
 
         data = xr.concat([data0, data1], dim='time')
 

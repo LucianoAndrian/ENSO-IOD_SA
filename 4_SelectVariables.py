@@ -314,6 +314,50 @@ else:
     for process in processes:
         process.start()
 
+
+# HGT750 #######################################################################
+if len(seasons)>1:
+    def SelectEventsHGT750(c):
+        for s in seasons:
+            try:
+                aux_cases = \
+                    xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+                        .rename({'__xarray_dataarray_variable__': 'index'})
+            except:
+                aux_cases = \
+                    xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+                        .rename({'sst': 'index'})
+
+            data_hgt_s = xr.open_dataset(data_dir + 'hgt_' + s.lower() + '.nc')
+            case_events = SelectVariables(aux_cases, data_hgt_s)
+
+            case_events.to_netcdf(out_dir + 'hgt_' + c + '_' + s + '_05.nc')
+
+    pool = ThreadPool(4)  # uno por season
+    pool.map_async(SelectEventsHGT, [c for c in cases])
+
+else:
+    print('one season')
+    def SelectEventsHGT750(c):
+        s = seasons[0]
+        try:
+            aux_cases = \
+                xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+                    .rename({'__xarray_dataarray_variable__': 'index'})
+        except:
+            aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')\
+                .rename({'sst': 'index'})
+
+        data_hgt_s = xr.open_dataset(data_dir + 'hgt750_' + s.lower() + '_detrend.nc')
+
+        case_events = SelectVariables(aux_cases, data_hgt_s)
+        case_events.to_netcdf(out_dir + 'hgt750_' + c + '_' + s + '__detrend_05.nc')
+
+
+    processes = [Process(target=SelectEventsHGT750, args=(c,)) for c in cases]
+    for process in processes:
+        process.start()
+
 print('# --------------------------------------------------------------------#')
 print('# --------------------------------------------------------------------#')
 print('done')
