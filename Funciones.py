@@ -1939,7 +1939,10 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
     print('1.1 Climatología y case')
     if v != 'hgt':
         end_nc_file = '_detrend_05.nc'
+        if v == 'hgt750': # que maravilla...
+            end_nc_file = '__detrend_05.nc'
         #end_nc_file = '_no_detrend_05.nc'
+
     else:
         end_nc_file = '_05.nc'
 
@@ -1951,6 +1954,8 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         clim = Weights(
             xr.open_dataset(cases_dir + v + '_' + s.lower() +
                             end_nc_file).rename({v_name: 'var'}) * fix_factor)
+
+
 
     if ocean_mask is True:
         mask = MakeMask(clim, list(clim.data_vars)[0])
@@ -1970,6 +1975,11 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         aux = clim.mean('time').__mul__(0)
         return aux, aux, aux
 
+    try:
+        clim = clim.sel(P=750)
+        case = case.sel(P=750)
+    except:
+        pass
 
     if v == 'tref' or v == 'prec' or v == 'tsigma':
         lat = np.arange(-60, 20 + 1)
@@ -2123,6 +2133,227 @@ def BinsByCases(v, v_name, fix_factor, s, mm, c, c_count,
         num_bin_main.append(num_bin)
 
     return anom_bin_main, num_bin_main, clim
+
+def BinsByCases_noComp(v, v_name, fix_factor, s, mm, c, c_count,
+                       bin_limits, bins_by_cases_dmi, bins_by_cases_n34,
+                       dates_dir, cases_dir, snr=False, neutro_clim=False,
+                       box=False, box_lat=[], box_lon=[], ocean_mask=False):
+
+    def Weights(data):
+        weights = np.transpose(
+            np.tile(np.cos(np.arange(
+                data.lat.min().values,
+                data.lat.max().values + 1) * np.pi / 180),
+                    (len(data.lon), 1)))
+        try:
+            data_w = data * weights
+        except:
+            data_w = data.transpose('time', 'lat', 'lon') * weights
+
+        return data_w
+
+    # 1. se abren los archivos de los índices (completos y se pesan por su SD)
+    # tambien los archivos de la variable en cuestion pero para cada "case" = c
+
+    data_dates_dmi_or = xr.open_dataset(dates_dir + 'DMI_' + s +
+                                        '_Leads_r_CFSv2.nc')
+    data_dates_dmi_or /= data_dates_dmi_or.mean('r').std()
+
+    data_dates_n34_or = xr.open_dataset(dates_dir + 'N34_' + s +
+                                        '_Leads_r_CFSv2.nc')
+
+    aux_n34_std = data_dates_n34_or.mean('r').std()
+    data_dates_n34_or /= aux_n34_std
+
+    print('1.1 Climatología y case')
+    if v != 'hgt':
+        end_nc_file = '_detrend_05.nc'
+        # end_nc_file = '_no_detrend_05.nc'
+    else:
+        end_nc_file = '_05.nc'
+
+    if neutro_clim:
+        clim = Weights(
+            xr.open_dataset(cases_dir + v + '_neutros' + '_' + s.upper() +
+                            end_nc_file).rename({v_name: 'var'}) * fix_factor)
+    else:
+        clim = Weights(
+            xr.open_dataset(cases_dir + v + '_' + s.lower() +
+                            end_nc_file).rename({v_name: 'var'}) * fix_factor)
+
+    if ocean_mask is True:
+        mask = MakeMask(clim, list(clim.data_vars)[0])
+        clim = clim * mask
+
+    try:
+        case = Weights(
+            xr.open_dataset(cases_dir + v + '_' + c + '_' + s.upper() +
+                            end_nc_file).rename({v_name: 'var'}) * fix_factor)
+
+        if ocean_mask is True:
+            mask = MakeMask(case, list(case.data_vars)[0])
+            case = case * mask
+
+    except:
+        print(f"case {c}, no encontrado para {v}")
+        aux = clim.mean('time').__mul__(0)
+        return aux, aux, aux
+
+    if v == 'tref' or v == 'prec' or v == 'tsigma':
+        lat = np.arange(-60, 20 + 1)
+        lon = np.arange(275, 330 + 1)
+    else:
+        lat = np.linspace(-80, 20, 101)
+        lon = np.linspace(0, 359, 360)
+
+    if clim.lat[0] > clim.lat[-1]:
+        lat_clim = lat[::-1]
+    else:
+        lat_clim = lat
+    clim = clim.sel(lat=slice(lat_clim[0], lat_clim[-1]),
+                    lon=slice(lon[0], lon[-1]))
+
+    if case.lat[0] > case.lat[-1]:
+        lat_case = lat[::-1]
+    else:
+        lat_case = lat
+    case = case.sel(lat=slice(lat_case[0], lat_case[-1]),
+                    lon=slice(lon[0], lon[-1]))
+
+    print('Anomalía')
+    for l in [0, 1, 2, 3]:
+        try:
+            clim_aux = clim.sel(
+                time=clim.time.dt.month.isin(mm - l)).mean(['r', 'time'])
+        except:
+            clim_aux = clim.sel(
+                time=clim.time.dt.month.isin(mm - l)).mean(['time'])
+
+        if l == 0:
+            anom = case.sel(time=case.time.dt.month.isin(mm - l)) #- clim_aux
+        else:
+            anom2 = case.sel(time=case.time.dt.month.isin(mm - l))# - clim_aux
+            anom = xr.concat([anom, anom2], dim='time')
+
+    print('1.2')
+    anom = anom.sortby(anom.time.dt.month)
+
+    if box is True:
+        anom = anom.sel(lat=slice(min(box_lat), max(box_lat)),
+                        lon=slice(box_lon[0], box_lon[1]))
+        anom = anom.mean(['lon', 'lat'], skipna=True)
+        aux_set_ds = ['time']
+    else:
+        aux_set_ds = ['time', 'lat', 'lon']
+
+    # 2. Vinculo fechas case -> índices DMI y N34 para poder clasificarlos
+    # las fechas entre el case variable y el case indices COINCIDEN,
+    # DE ESA FORMA SE ELIGIERON LOS CASES VARIABLE
+    # pero diferen en orden. Para evitar complicar la selección usando r y L
+    # con .sortby(..time.dt.month) en cada caso se simplifica el problema
+    # y coinciden todos los eventos en fecha, r y L
+
+    cases_date_dir = '/pikachu/datos/luciano.andrian/cases_dates/'
+
+    aux_cases = xr.open_dataset(cases_date_dir + c + '_f_' + s + '_05.nc')
+    aux_cases = aux_cases.rename({list(aux_cases.data_vars)[0]: 'index'})
+
+    case_sel_dmi = SelectVariables(aux_cases, data_dates_dmi_or)
+    case_sel_dmi = case_sel_dmi.sortby(case_sel_dmi.time.dt.month)
+    case_sel_dmi_n34 = SelectVariables(aux_cases, data_dates_n34_or)
+    case_sel_dmi_n34 = case_sel_dmi_n34.sortby(case_sel_dmi_n34.time.dt.month)
+
+    print('2.1 uniendo var, dmi y n34')
+    try:
+        data_merged = xr.Dataset(
+            data_vars=dict(
+                var=(aux_set_ds, anom['var'].values),
+                dmi=(['time'], case_sel_dmi.sst.values),
+                n34=(['time'], case_sel_dmi_n34.sst.values),
+            ),
+            coords=dict(
+                time=anom.time.values
+            )
+        )
+
+    # No deberia suceder pero con tref hay fechas duplicadas en 2011 y los campos
+    # de estas fechas no son iguales. son 4 datos en total.
+    except:
+        print('error de anios, revisando...')
+        times_to_remove = []
+        for t in anom.time.values:
+            lista = anom.sel(time=t).r.values
+            vistos = set()
+
+            try:
+                len(lista)
+                for valor in lista:
+                    if valor in vistos:
+                        print(f'error en anio {t}, será removido')
+                        times_to_remove.append(t)
+                    else:
+                        vistos.add(valor)
+            except:
+                pass
+
+        print(times_to_remove)
+        for t in np.unique(times_to_remove):
+            anom = anom.sel(time=anom.time != t)
+            case_sel_dmi = case_sel_dmi.sel(
+                time=case_sel_dmi.time != t)
+            case_sel_dmi_n34 = case_sel_dmi_n34.sel(
+                time=case_sel_dmi_n34.time != t)
+
+        data_merged = xr.Dataset(
+            data_vars=dict(
+                var=(aux_set_ds, anom['var'].values),
+                dmi=(['time'], case_sel_dmi.sst.values),
+                n34=(['time'], case_sel_dmi_n34.sst.values),
+            ),
+            coords=dict(
+                time=anom.time.values
+            )
+        )
+
+    bins_aux_dmi = bins_by_cases_dmi[c_count]
+    bins_aux_n34 = bins_by_cases_n34[c_count]
+    print("3. Seleccion en cada bin")
+    anom_bin_main = list()
+    num_bin_main = list()
+    # loops en las bins para el dmi segun case
+    for ba_dmi in range(0, len(bins_aux_dmi)):
+        bins_aux = data_merged.where(
+            SelectBins(data_merged.dmi,
+                       bin_limits[bins_aux_dmi[ba_dmi]][0],
+                       bin_limits[bins_aux_dmi[ba_dmi]][1]))
+
+        anom_bin = list()
+        num_bin = list()
+        # loop en las correspondientes al n34 segun case
+        for ba_n34 in range(0, len(bins_aux_n34)):
+            bin_f = bins_aux.where(
+                SelectBins(
+                    bins_aux.n34,
+                    bin_limits[bins_aux_n34[ba_n34]][
+                        0] / aux_n34_std.sst.values,
+                    bin_limits[bins_aux_n34[ba_n34]][
+                        1] / aux_n34_std.sst.values))
+
+            if snr:
+                spread = bin_f - bin_f.mean(['time'])
+                spread = spread.std('time')
+                SNR = bin_f.mean(['time']) / spread
+                anom_bin.append(SNR)
+            else:
+                anom_bin.append(bin_f['var'])
+
+            num_bin.append(len(np.where(~np.isnan(bin_f['dmi']))[0]))
+
+        anom_bin_main.append(anom_bin)
+        num_bin_main.append(num_bin)
+
+    return anom_bin_main, num_bin_main, clim
+
 
 def DetrendClim(data, mm, v_name='prec'):
     # la diferencia es mínima en fitlrar o no tendencia para hacer una climatología,
@@ -3055,7 +3286,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                    cbar_pos='H', plot_step=3,
                                    clim_plot_ctn=None, clim_levels_ctn=None,
                                    pdf=True, ocean_mask=False,
-                                   data_ctn_no_ocean_mask=False):
+                                   data_ctn_no_ocean_mask=False,
+                                   sig_data=None, hatches=None):
 
     # cantidad de filas necesarias
     num_cols = 5
@@ -3249,6 +3481,34 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             except:
                 aux_var = aux.values
 
+
+            if sig_data is not None:
+                aux_sig_points = sig_data.sel(plots=plot)
+                if aux_sig_points.mean().values != 0:
+
+                    if ocean_mask is True:
+                        mask_ocean = MakeMask(aux_sig_points)
+                        aux_sig_points = aux_sig_points * mask_ocean.mask
+
+                    # hatches = '....'
+                    colors_l = ['k', 'k']
+                    try:
+                        comp_sig_var = aux_sig_points['var']
+                    except:
+                        comp_sig_var = aux_sig_points.values
+                    cs = ax.contourf(aux_sig_points.lon,
+                                     aux_sig_points.lat,
+                                     comp_sig_var,
+                                     transform=crs_latlon, colors='none',
+                                     hatches=[hatches, hatches], extend='lower', zorder=5)
+
+                    for i2, collection in enumerate(cs.collections):
+                        collection.set_edgecolor(colors_l[i2 % len(colors_l)])
+
+                    for collection in cs.collections:
+                        collection.set_linewidth(0.)
+
+
             # Contourf ------------------------------------------------------- #
             if ((aux.mean().values != 0) and
                     (~np.isnan(aux.mean().values))):
@@ -3261,7 +3521,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                  aux.lat.values[::plot_step],
                                  aux_var[::plot_step,::plot_step],
                                  levels=levels,
-                                 transform=crs_latlon, cmap=cmap, extend='both')
+                                 transform=crs_latlon, cmap=cmap, extend='both', zorder=1)
 
                 ax.add_feature(cartopy.feature.LAND, facecolor='white',
                                linewidth=0.5)

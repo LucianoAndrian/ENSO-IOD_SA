@@ -2,7 +2,7 @@
 Figuras ENSO-IOD-SA
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 plot_bins = False
 plot_bins_2d = False
@@ -16,8 +16,6 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 from matplotlib import colors
 import matplotlib.pyplot as plt
-from scipy.stats import ttest_ind
-import matplotlib.path as mpath
 
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
@@ -533,9 +531,8 @@ aux_scales = [scale_t, scale_pp]
 aux_cbar = [cbar, cbar_pp]
 aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
 
-variables_hgt = ['hgt'] # vamos a necesitar otro nivel?
-aux_scales_hgt = [scale_hgt]
-aux_cbar_hgt = [cbar]
+variables_hgt = ['hgt', 'hgt750'] # vamos a necesitar otro nivel?
+aux_cbar_hgt = [cbar, cbar]
 
 for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
                                           aux_cbar_snr):
@@ -548,11 +545,21 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
         f'{cases_dir}{v}_neutros_SON_detrend_05.nc')*fix
     data_neutro = data_neutro.rename({list(data_neutro.data_vars)[0]: 'var'})
 
-    for v_hgt, v_hgt_scale, v_hgt_cbar in zip(
-            variables_hgt, aux_scales_hgt, aux_cbar_hgt):
+    for v_hgt, v_hgt_cbar in zip(
+            variables_hgt, aux_cbar_hgt):
 
-        neutro_hgt = (xr.open_dataset(f'{cases_dir}{v_hgt}_neutros_SON_05.nc')
-                      .rename({'hgt': 'var'}))
+        if v_hgt == 'hgt750':
+            end_name_file =  '__detrend_05' # es igual al otro es solo el nombre
+            aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
+        else:
+            end_name_file = '_05'
+            aux_scale_hgt = [-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
+
+        neutro_hgt = xr.open_dataset(
+            f'{cases_dir}{v_hgt}_neutros_SON{end_name_file}.nc')
+
+        neutro_hgt = neutro_hgt.rename({list(neutro_hgt.data_vars)[0]: 'var'})
+
         neutro_hgt = Weights(neutro_hgt.__mul__(9.80665))
         neutro_hgt = neutro_hgt.rename({list(neutro_hgt.data_vars)[0]: 'var'})
 
@@ -571,8 +578,8 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
             case_sig = xr.open_dataset(
                 f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc')*fix
 
-
-            case_hgt = xr.open_dataset(f'{cases_dir}{v_hgt}_{c}_SON_05.nc')
+            case_hgt = xr.open_dataset(
+                f'{cases_dir}{v_hgt}_{c}_SON{end_name_file}.nc')
             case_hgt = case_hgt.rename({list(case_hgt.data_vars)[0]: 'var'})
             case_hgt = Weights(case_hgt.__mul__(9.80665))
 
@@ -595,6 +602,12 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
             aux_spread = aux_spread.std('time')
             snr_hgt = comp_hgt / aux_spread
 
+            try:
+                comp_hgt = comp_hgt.sel(P=750)
+                snr_hgt = snr_hgt.sel(P=750)
+            except:
+                pass
+
             aux_data.append(comp)
             aux_data_snr.append(snr)
             aux_hgt.append(comp_hgt)
@@ -609,44 +622,45 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
 
         aux_var_sig = xr.concat(aux_var_sig, dim='plots')
 
-    aux_scale_hgt=[-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
-    PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
-              titles=title_case, namefig=f"comp_cfsv2_{v}", map='sa',
-              save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=aux_hgt, color_ctn='k',
-              high=3, width=7, num_cols=3,
-              num_cases=True, num_cases_data=aux_num_cases,
-              levels_ctn=aux_scale_hgt, ocean_mask=True,
-              data_ctn_no_ocean_mask=True,
-              sig_points=aux_var_sig, hatches='...')
+        PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
+                  titles=title_case, namefig=f"comp_cfsv2_{v}_{v_hgt}", map='sa',
+                  save=save, dpi=dpi, out_dir=out_dir,
+                  data_ctn=aux_hgt, color_ctn='k',
+                  high=3, width=7, num_cols=3,
+                  num_cases=True, num_cases_data=aux_num_cases,
+                  levels_ctn=aux_scale_hgt, ocean_mask=True,
+                  data_ctn_no_ocean_mask=True,
+                  sig_points=aux_var_sig, hatches='...')
 
-    PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
-              titles=title_case, namefig=f"comp_snr_cfsv2_{v}", map='sa',
-              save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=None, color_ctn='k',
-              high=3, width=7, num_cols=3,
-              num_cases=True, num_cases_data=aux_num_cases,
-              levels_ctn=aux_scale_hgt, ocean_mask=True,
-              data_ctn_no_ocean_mask=True)
+        if v_hgt == variables_hgt[0]:
+            PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
+                      titles=title_case, namefig=f"comp_snr_cfsv2_{v}_{v_hgt}",
+                      map='sa',
+                      save=save, dpi=dpi, out_dir=out_dir,
+                      data_ctn=None, color_ctn='k',
+                      high=3, width=7, num_cols=3,
+                      num_cases=True, num_cases_data=aux_num_cases,
+                      levels_ctn=aux_scale_hgt, ocean_mask=True,
+                      data_ctn_no_ocean_mask=True)
 
-    # if v == variables[0]:
-    #     # scale_hgt=[-150, -100, -50, -25, -10,
-    #     # 10, 25, 50, 100, 150]
-    #     # PlotFinal(data=aux_hgt, levels=scale_hgt, cmap=v_hgt_cbar,
-    #     #           titles=title_case, namefig=f"comp_cfsv2_hgt_{v}", map='sa',
-    #     #           save=save, dpi=dpi, out_dir=out_dir,
-    #     #           data_ctn=aux_hgt, color_ctn='k',
-    #     #           high=3, width=7, num_cols=3,
-    #     #           num_cases=True, num_cases_data=aux_num_cases,
-    #     #           levels_ctn=aux_scale_hgt, ocean_mask=False)
-    #
-    #     PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
-    #               titles=title_case, namefig=f"comp_snr_cfsv2_hgt_{v}", map='sa',
-    #               save=save, dpi=dpi, out_dir=out_dir,
-    #               data_ctn=aux_hgt_snr, color_ctn='k',
-    #               high=3, width=7, num_cols=3,
-    #               num_cases=True, num_cases_data=aux_num_cases,
-    #               levels_ctn=scale_snr, ocean_mask=False)
+        if v == variables[0]:
+            PlotFinal(data=aux_hgt, levels=aux_scale_hgt, cmap=v_hgt_cbar,
+                      titles=title_case, namefig=f"comp_cfsv2_{v_hgt}_{v}",
+                      map='sa',
+                      save=save, dpi=dpi, out_dir=out_dir,
+                      data_ctn=aux_hgt, color_ctn='k',
+                      high=3, width=7, num_cols=3,
+                      num_cases=True, num_cases_data=aux_num_cases,
+                      levels_ctn=aux_scale_hgt, ocean_mask=False)
+
+            PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
+                      titles=title_case, namefig=f"comp_snr_cfsv2_{v_hgt}_{v}",
+                      map='sa',
+                      save=save, dpi=dpi, out_dir=out_dir,
+                      data_ctn=aux_hgt_snr, color_ctn='k',
+                      high=3, width=7, num_cols=3,
+                      num_cases=True, num_cases_data=aux_num_cases,
+                      levels_ctn=scale_snr, ocean_mask=False)
 
 print('Done CFSv2 Composite ------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
@@ -670,7 +684,6 @@ col_titles = [None, None, 'Neutro IOD', 'Moderate IOD+',
               'Strong IOD-', 'Moderate IOD-']
 
 # Orden de ploteo ------------------------------------------------------------ #
-
 bin_limits = [[-4.5,-1], #0 s
               [-1, -0.5], #1 m
               [-0.5, 0.5], #2 -
@@ -693,7 +706,7 @@ variables_hgt = ['hgt'] # vamos a necesitar otro nivel?
 aux_scale_hgt=[-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
 aux_scales_hgt = [aux_scale_hgt]
 aux_cbar_hgt = [cbar]
-
+aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
 print('Plot ----------------------------------------------------------------- ')
 for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         variables, aux_scales, aux_cbar, aux_scales_clim, aux_cbar_clim,
@@ -757,7 +770,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
         print('hgt ---------------------------------------------------------- ')
         cases_bin_hgt, num_bin_hgt, auxx_hgt = BinsByCases(
-            v='hgt', v_name='hgt', fix_factor=9.8, s='SON', mm=10, c=c,
+            v='hgt750', v_name='HGT', fix_factor=9.8, s='SON', mm=10, c=c,
             c_count=c_count,
             bin_limits=bin_limits,
             bins_by_cases_dmi=bins_by_cases_dmi,
@@ -790,8 +803,8 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
     lat = np.arange(-60, 20 + 1)
     lon = np.arange(275, 330 + 1)
-    lat_hgt = np.linspace(-80, 20, 101)
-    lon_hgt = np.linspace(0, 359, 360)
+    lat_hgt = auxx_hgt.lat.values
+    lon_hgt = auxx_hgt.lon.values
 
     clim = clim.sel(lon=lon, lat=lat)
     clim = clim - fix_clim
@@ -799,6 +812,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     clim_hgt = clim_hgt.sel(lon=lon, lat=lat)
 
     cases_ordenados = []
+    cases_ordenados_sig = []
     cases_ordenados_hgt = []
     cases_ordenados_snr = []
 
@@ -828,11 +842,25 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         da = xr.DataArray(aux, dims=["lat", "lon"],
                           coords={"lat": lat, "lon": lon},
                           name="var")
+
         cases_ordenados.append(da)
+
+        try:
+            aux_sig = xr.open_dataset(
+                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc')*fix
+
+            da_sig = da.where((da < aux_sig[v][0]) |
+                              (da > aux_sig[v][1]))
+            da_sig = da_sig.where(np.isnan(da_sig), 1)
+        except:
+            da_sig = da*0
+
+        cases_ordenados_sig.append(da_sig)
 
         da_hgt = xr.DataArray(aux_hgt, dims=["lat", "lon"],
                           coords={"lat": lat_hgt, "lon": lon_hgt},
                           name="var")
+        da_hgt = da_hgt.sel(lat=slice(None, None, -1))
         cases_ordenados_hgt.append(da_hgt)
 
         da_snr = xr.DataArray(aux_snr['var'], dims=["lat", "lon"],
@@ -843,6 +871,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     cases_ordenados = xr.concat(cases_ordenados, dim='plots')
     cases_ordenados_hgt = xr.concat(cases_ordenados_hgt, dim='plots')
     cases_ordenados_snr = xr.concat(cases_ordenados_snr, dim='plots')
+    cases_ordenados_sig = xr.concat(cases_ordenados_sig, dim='plots')
 
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
                                    cmap=v_cbar, titles=aux_num,
@@ -850,7 +879,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    map='sa', save=save, dpi=dpi,
                                    out_dir=out_dir,
                                    data_ctn=cases_ordenados_hgt,
-                                   levels_ctn = np.linspace(-150,150,13),
+                                   levels_ctn = aux_scale_hgt,
                                    color_ctn='k', row_titles=row_titles,
                                    col_titles=col_titles, clim_plot=clim,
                                    clim_cbar=v_cbar_clim,
@@ -861,7 +890,9 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    ocean_mask=True,
                                    data_ctn_no_ocean_mask=True,
                                    plot_step=1,
-                                   cbar_pos='V')
+                                   cbar_pos='V',
+                                   sig_data=cases_ordenados_sig,
+                                   hatches='...')
 
     # SNR plot
     PlotFinal_CompositeByMagnitude(data=cases_ordenados_snr, levels=scale_snr,
@@ -1131,8 +1162,4 @@ else:
 
 print(' Done Bins 2D -------------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
-
 ################################################################################
-
-
-

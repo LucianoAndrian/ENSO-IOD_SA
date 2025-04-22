@@ -1,5 +1,6 @@
 """
-Test de Monte Carlo para las composiciones en CFSv2
+Igual 10_MonteCarloTest_for_CFSv2_BinsByCases_Composites.py
+pero para BinsByCases
 """
 # ---------------------------------------------------------------------------- #
 save = False
@@ -21,6 +22,8 @@ import math
 from datetime import datetime
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import gc
+import multiprocessing as mp
+from Funciones import SetBinsByCases, BinsByCases_noComp
 
 # ---------------------------------------------------------------------------- #
 dir_events = '/pikachu/datos/luciano.andrian/cases_fields/'
@@ -76,17 +79,75 @@ def NumberPerts(data_to_concat, neutro, num = 0):
 
     return M
 
-# ---------------------------------------------------------------------------- #
+def SetXr_fromBinsByCases(base, data_to_set, v_name):
+
+    event = data_to_set.dropna(dim='time', how='all')
+    proto_event = base.copy().drop_dims('time')
+    proto_event[v_name] = event
+    proto_event = proto_event.rename({'time':'position'})
+    proto_event['position'] = np.arange(len(proto_event.position))
+
+    return proto_event
+
+# Set Composites by cases ---------------------------------------------------- #
+dates_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
+cases_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
+
+cases_aux = ['sim_pos', 'sim_neg', 'dmi_puros_pos', 'dmi_puros_neg',
+             'n34_puros_pos', 'n34_puros_neg']
+
+bin_limits = [[-4.5,-1], #0 s
+              [-1, -0.5], #1 m
+              [-0.5, 0.5], #2 -
+              [0.5, 1], #3  m
+              [1, 4.5]] #4 s
+
+indices = ['n34', 'dmi']
+magnitudes = ['s', 'm']
+cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
+    SetBinsByCases(indices, magnitudes, bin_limits, cases)
+
 for v in variables:
-    print(v)
+
+    if v == 'prec':
+        fix = 1 # probando con valores sin fix
+        fix_clim = 0
+    else:
+        fix = 1
+        fix_clim = 273
+
+    aux_comps = {}
+    aux_num_comps = {}
+    n_count = 0
+
+    for c_count, c in enumerate(cases):
+        print('comp --------------------------------------------------------- ')
+        cases_bin, num_bin, auxx = BinsByCases_noComp(
+            v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c, c_count=c_count,
+            bin_limits=bin_limits,
+            bins_by_cases_dmi=bins_by_cases_dmi,
+            bins_by_cases_n34=bins_by_cases_n34,
+            snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
+            neutro_clim=True)
+
+        bins_aux_dmi = bins_by_cases_dmi[c_count]
+        bins_aux_n34 = bins_by_cases_n34[c_count]
+
+        for b_n34 in range(0, len(bins_aux_n34)):
+            for b_dmi in range(0, len(bins_aux_dmi)):
+                aux_comps[cases_names[n_count]] = \
+                    SetXr_fromBinsByCases(auxx, cases_bin[b_dmi][b_n34], v)
+                aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
+                n_count += 1
 
     neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON_detrend_05.nc')
     len_neutro = len(neutro.time)
     neutro = neutro.rename({'time': 'position'})
     neutro = neutro.drop_vars(['r', 'L'])
 
-    for c in cases:
-        print(c)
+
+    for k in aux_comps.keys(): # son los "cases" de cada categoria
+        print(k)
         # Borrar archivos temporales ----------------------------------------- #
         files = glob.glob('/pikachu/datos/luciano.andrian/'
                           'observado/ncfiles/nc_comps/' + '*.nc')
@@ -99,9 +160,7 @@ for v in variables:
                     print('Error: ' + f)
 
         # -------------------------------------------------------------------- #
-        event = xr.open_dataset(f'{dir_events}{v}_{c}_SON_no_detrend.nc')
-        event = event.rename({'time': 'position'})
-        event = event.drop_vars(['r', 'L'])
+        event = aux_comps[k].copy()
 
         concat = xr.concat([neutro, event], dim='position')
 
@@ -134,7 +193,7 @@ for v in variables:
             gc.collect()
 
         M = NumberPerts(concat, neutro, 0)
-        import multiprocessing as mp
+
         hour = datetime.now().hour
 
         if (hour > 19) | (hour < 8):
@@ -162,7 +221,7 @@ for v in variables:
         aux = aux.chunk({'position': -1})
         qt = aux.quantile([.05, .95], dim='position',
                           interpolation='linear')
-        qt.to_netcdf(f'{out_dir}{v}_QT_{c}_CFSv2_detrend_05.nc',
+        qt.to_netcdf(f'{out_dir}{v}_QT_{k}_CFSv2_detrend_05.nc',
                      compute=True)
         aux.close()
         del qt, aux
@@ -172,3 +231,7 @@ print('# ------------------------------------------------------------------- #')
 print('# ------------------------------------------------------------------- #')
 print('done')
 print('# ------------------------------------------------------------------- #')
+
+
+
+
