@@ -709,13 +709,27 @@ print('Plot ----------------------------------------------------------------- ')
 for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         variables, aux_scales, aux_cbar, aux_scales_clim, aux_cbar_clim,
         aux_cbar_snr):
+    print(v)
 
     if v == 'prec':
         fix = 30
         fix_clim = 0
-    else:
+        v_in_name = v
+        scale_in_hgt = aux_scale_hgt
+    elif v == 'tref':
         fix = 1
         fix_clim = 273
+        v_in_name = v
+        scale_in_hgt = aux_scale_hgt
+    else:
+        fix = 9.8
+        fix_clim = 0
+        if v == 'hgt750':
+            v_in_name = 'HGT'
+            scale_in_hgt = aux_scale_hgt
+        else:
+            v_in_name = 'hgt'
+            scale_in_hgt = aux_scale_hgt200
 
     aux_comps = {}
     aux_num_comps = {}
@@ -729,67 +743,10 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
     for c_count, c in enumerate(cases):
 
-        if v == 'prec' or v == 'tref':
-            print(
-                'comp --------------------------------------------------------- ')
-            cases_bin, num_bin, auxx = BinsByCases(
-                v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
-                c_count=c_count,
-                bin_limits=bin_limits,
-                bins_by_cases_dmi=bins_by_cases_dmi,
-                bins_by_cases_n34=bins_by_cases_n34,
-                snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
-                neutro_clim=True)
-
-            bins_aux_dmi = bins_by_cases_dmi[c_count]
-            bins_aux_n34 = bins_by_cases_n34[c_count]
-
-            for b_n34 in range(0, len(bins_aux_n34)):
-                for b_dmi in range(0, len(bins_aux_dmi)):
-                    aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
-                    aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
-                    n_count += 1
-
-            print(
-                'snr ---------------------------------------------------------- ')
-            cases_bin_snr, num_bin_snr, auxx_snr = BinsByCases(
-                v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
-                c_count=c_count,
-                bin_limits=bin_limits,
-                bins_by_cases_dmi=bins_by_cases_dmi,
-                bins_by_cases_n34=bins_by_cases_n34,
-                snr=True, cases_dir=cases_dir, dates_dir=dates_dir,
-                neutro_clim=True)
-
-            bins_aux_dmi_snr = bins_by_cases_dmi[c_count]
-            bins_aux_n34_snr = bins_by_cases_n34[c_count]
-
-            for b_n34 in range(0, len(bins_aux_n34_snr)):
-                for b_dmi in range(0, len(bins_aux_dmi_snr)):
-                    aux_comps_snr[cases_names[n_count_snr]] = \
-                        cases_bin_snr[b_dmi][b_n34]
-                    aux_num_comps_snr[cases_names[n_count_snr]] = \
-                        num_bin_snr[b_dmi][b_n34]
-                    n_count_snr += 1
-
-            check_t_pp = True
-        else:
-            check_t_pp = False
-
-
-        print('hgt ---------------------------------------------------------- ')
-        if v == 'hgt':
-            v_in_hgt = 'hgt'
-            scale_in_hgt = aux_scale_hgt200
-            v_name_hgt = 'hgt'
-        else:
-            v_in_hgt = 'hgt750'
-            scale_in_hgt = aux_scale_hgt
-            v_name_hgt = 'HGT'
-
-
-        cases_bin_hgt, num_bin_hgt, auxx_hgt = BinsByCases(
-            v=v_in_hgt, v_name=v_name_hgt, fix_factor=9.8, s='SON', mm=10, c=c,
+        # BinsByCases -------------------------------------------------------- #
+        print('comp --------------------------------------------------------- ')
+        cases_bin, num_bin, auxx = BinsByCases(
+            v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
             c_count=c_count,
             bin_limits=bin_limits,
             bins_by_cases_dmi=bins_by_cases_dmi,
@@ -797,46 +754,69 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
             snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
             neutro_clim=True)
 
-        bins_aux_dmi_hgt = bins_by_cases_dmi[c_count]
-        bins_aux_n34_hgt = bins_by_cases_n34[c_count]
+        bins_aux_dmi = bins_by_cases_dmi[c_count]
+        bins_aux_n34 = bins_by_cases_n34[c_count]
 
-        for b_n34 in range(0, len(bins_aux_n34_hgt)):
-            for b_dmi in range(0, len(bins_aux_dmi_hgt)):
-                aux_comps_hgt[cases_names[n_count_hgt]] = \
-                    cases_bin_hgt[b_dmi][b_n34]
-                aux_num_comps_hgt[cases_names[n_count_hgt]] = \
-                    num_bin_hgt[b_dmi][b_n34]
-                n_count_hgt += 1
+        for b_n34 in range(0, len(bins_aux_n34)):
+            for b_dmi in range(0, len(bins_aux_dmi)):
+                aux_comps[cases_names[n_count]] = cases_bin[b_dmi][b_n34]
+                aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
+                n_count += 1
 
-        if check_t_pp is False:
-            print(
-                'snr ---------------------------------------------------------- ')
-            cases_bin_snr, num_bin_snr, auxx_snr = BinsByCases(
-                v=v_in_hgt, v_name=v_name_hgt, fix_factor=9.8, s='SON', mm=10, c=c,
+        print('snr ---------------------------------------------------------- ')
+        cases_bin_snr, num_bin_snr, auxx_snr = BinsByCases(
+            v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
+            c_count=c_count,
+            bin_limits=bin_limits,
+            bins_by_cases_dmi=bins_by_cases_dmi,
+            bins_by_cases_n34=bins_by_cases_n34,
+            snr=True, cases_dir=cases_dir, dates_dir=dates_dir,
+            neutro_clim=True)
+
+        bins_aux_dmi_snr = bins_by_cases_dmi[c_count]
+        bins_aux_n34_snr = bins_by_cases_n34[c_count]
+
+        for b_n34 in range(0, len(bins_aux_n34_snr)):
+            for b_dmi in range(0, len(bins_aux_dmi_snr)):
+                aux_comps_snr[cases_names[n_count_snr]] = \
+                    cases_bin_snr[b_dmi][b_n34]
+                aux_num_comps_snr[cases_names[n_count_snr]] = \
+                    num_bin_snr[b_dmi][b_n34]
+                n_count_snr += 1
+
+        # hgt750 contornos --------------------------------------------------- #
+        if v == 'prec' or v == 'tref':
+            check_t_pp = True
+
+            cases_bin_hgt, num_bin_hgt, auxx_hgt = BinsByCases(
+                v='hgt750', v_name='HGT', fix_factor=9.8, s='SON', mm=10,
+                c=c,
                 c_count=c_count,
                 bin_limits=bin_limits,
                 bins_by_cases_dmi=bins_by_cases_dmi,
                 bins_by_cases_n34=bins_by_cases_n34,
-                snr=True, cases_dir=cases_dir, dates_dir=dates_dir,
+                snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
                 neutro_clim=True)
 
-            bins_aux_dmi_snr = bins_by_cases_dmi[c_count]
-            bins_aux_n34_snr = bins_by_cases_n34[c_count]
+            bins_aux_dmi_hgt = bins_by_cases_dmi[c_count]
+            bins_aux_n34_hgt = bins_by_cases_n34[c_count]
 
-            for b_n34 in range(0, len(bins_aux_n34_snr)):
-                for b_dmi in range(0, len(bins_aux_dmi_snr)):
-                    aux_comps_snr[cases_names[n_count_snr]] = \
-                        cases_bin_snr[b_dmi][b_n34]
-                    aux_num_comps_snr[cases_names[n_count_snr]] = \
-                        num_bin_snr[b_dmi][b_n34]
-                    n_count_snr += 1
+            for b_n34 in range(0, len(bins_aux_n34_hgt)):
+                for b_dmi in range(0, len(bins_aux_dmi_hgt)):
+                    aux_comps_hgt[cases_names[n_count_hgt]] = \
+                        cases_bin_hgt[b_dmi][b_n34]
+                    aux_num_comps_hgt[cases_names[n_count_hgt]] = \
+                        num_bin_hgt[b_dmi][b_n34]
+                    n_count_hgt += 1
 
+            lat_hgt = auxx_hgt.lat.values
+            lon_hgt = auxx_hgt.lon.values
+
+        else:
+            check_t_pp = False
 
     lat = np.arange(-60, 20 + 1)
     lon = np.arange(275, 330 + 1)
-    lat_hgt = auxx_hgt.lat.values
-    lon_hgt = auxx_hgt.lon.values
-
 
     # Clim ------------------------------------------------------------------- #
     if check_t_pp is True:
@@ -848,13 +828,13 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         clim = clim.sel(lon=lon, lat=lat)
         clim = clim - fix_clim
 
-
     clim_hgt = xr.open_dataset(f'/pikachu/datos/luciano.andrian/'
                            f'val_clim_cfsv2/hindcast_cfsv2_meanclim_son.nc'
                            ) * 9.8
     clim_hgt = clim_hgt.rename({list(clim_hgt.data_vars)[0]: 'var'})
     clim_hgt = clim_hgt.sel(lon=lon, lat=lat)
 
+    # ordenando por categorias ----------------------------------------------- #
     cases_ordenados = []
     cases_ordenados_sig = []
     cases_ordenados_hgt = []
@@ -865,77 +845,87 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     aux_num_snr = []
     for c in cases_magnitude:
         try:
-            if check_t_pp is True:
-                aux = aux_comps[c]
-                aux_num.append(aux_num_comps[c])
-
-            aux_hgt = aux_comps_hgt[c]
-            aux_num_hgt.append(aux_num_comps_hgt[c])
+            aux = aux_comps[c]
+            aux_num.append(aux_num_comps[c])
 
             aux_snr = aux_comps_snr[c]
             aux_num_snr.append(aux_num_comps_snr[c])
 
-        except:
             if check_t_pp is True:
-                aux = aux_comps[cases_magnitude[2]] * 0
-                aux_num.append('')
+                aux_hgt = aux_comps_hgt[c]
+                aux_num_hgt.append(aux_num_comps_hgt[c])
 
-            aux_hgt = aux_comps_hgt[cases_magnitude[2]] * 0
-            aux_num_hgt.append('')
+        except:
+            aux = aux_comps[cases_magnitude[2]] * 0
+            aux_num.append('')
 
             aux_snr = aux_comps_snr[cases_magnitude[2]] * 0
             aux_num_snr.append('')
 
+            if check_t_pp is True:
+                aux_hgt = aux_comps_hgt[cases_magnitude[2]] * 0
+                aux_num_hgt.append('')
+
         if check_t_pp is True:
-            da = xr.DataArray(aux, dims=["lat", "lon"],
-                              coords={"lat": lat, "lon": lon},
-                              name="var")
+            lat_aux = lat
+            lon_aux = lon
+        else:
+            lat_aux = lat_hgt
+            lon_aux = lon_hgt
 
-            cases_ordenados.append(da)
-
-            try:
-                aux_sig = xr.open_dataset(
-                    f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
-
-                da_sig = da.where((da < aux_sig[v][0]) |
-                                  (da > aux_sig[v][1]))
-                da_sig = da_sig.where(np.isnan(da_sig), 1)
-            except:
-                da_sig = da * 0
-
-            cases_ordenados_sig.append(da_sig)
-
-        da_hgt = xr.DataArray(aux_hgt, dims=["lat", "lon"],
-                          coords={"lat": lat_hgt, "lon": lon_hgt},
+        da = xr.DataArray(aux, dims=["lat", "lon"],
+                          coords={"lat": lat_aux,
+                                  "lon": lon_aux},
                           name="var")
 
-        da_hgt = da_hgt.sel(lat=slice(None, None, -1))
-        cases_ordenados_hgt.append(da_hgt)
+        da_snr = xr.DataArray(aux_snr['var'], dims=["lat", "lon"],
+                              coords={"lat": lat_aux,
+                                      "lon": lon_aux},
+                              name="var")
+
+        try:
+            aux_sig = xr.open_dataset(
+                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
+
+            da_sig = da.where((da < aux_sig[v][0]) |
+                              (da > aux_sig[v][1]))
+            da_sig = da_sig.where(np.isnan(da_sig), 1)
+        except:
+            da_sig = da * 0
 
         if check_t_pp is True:
-            da_snr = xr.DataArray(aux_snr['var'], dims=["lat", "lon"],
-                                  coords={"lat": lat, "lon": lon},
-                                  name="var")
-            cases_ordenados_snr.append(da_snr)
-        else:
-            da_snr = xr.DataArray(aux_snr['var'], dims=["lat", "lon"],
+            da_hgt = xr.DataArray(aux_hgt, dims=["lat", "lon"],
                                   coords={"lat": lat_hgt, "lon": lon_hgt},
                                   name="var")
-            cases_ordenados_snr.append(da_snr)
+            da_hgt = da_hgt.sel(lat=slice(None, None, -1))
 
-    cases_ordenados_hgt = xr.concat(cases_ordenados_hgt, dim='plots')
+            cases_ordenados_hgt.append(da_hgt)
+        else:
+            if v == 'hgt':
+                da['lat'] = da['lat'][::-1]
+                da_snr['lat'] = da_snr['lat'][::-1]
+            da_sig['lat'] = da_sig['lat'][::-1]
+
+
+            da = da.sel(lat=lat, lon=lon)
+            da_snr = da_snr.sel(lat=lat, lon=lon)
+            da_sig = da_sig.sel(lat=lat, lon=lon)
+
+
+        cases_ordenados.append(da)
+        cases_ordenados_snr.append(da_snr)
+        cases_ordenados_sig.append(da_sig)
+
+    cases_ordenados = xr.concat(cases_ordenados, dim='plots')
     cases_ordenados_snr = xr.concat(cases_ordenados_snr, dim='plots')
+    cases_ordenados_sig = xr.concat(cases_ordenados_sig, dim='plots')
 
     if check_t_pp is True:
-        cases_ordenados = xr.concat(cases_ordenados, dim='plots')
-        cases_ordenados_sig = xr.concat(cases_ordenados_sig, dim='plots')
+        cases_ordenados_hgt = xr.concat(cases_ordenados_hgt, dim='plots')
         ocean_mask = True
     else:
-        cases_ordenados = cases_ordenados_hgt.sel(lat=lat, lon=lon)
-        cases_ordenados_snr = cases_ordenados_snr.sel(lat=lat, lon=lon)
-        clim = clim_hgt.sel(lat=lat, lon=lon)
-        cases_ordenados_sig = None
-        aux_num = aux_num_hgt
+        cases_ordenados_hgt = xr.concat(cases_ordenados, dim='plots')
+        clim = clim_hgt
         ocean_mask = False
 
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
