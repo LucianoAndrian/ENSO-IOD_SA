@@ -7,8 +7,8 @@ save = False
 out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
            'CFSv2_nc_quantiles/')
 
-variables = ['prec', 'tref']
-
+variables = ['prec', 'tref', 'hgt', 'hgt750']
+variables = ['hgt', 'hgt750']
 cases = ['sim_pos', 'sim_neg',
          'dmi_puros_pos', 'dmi_puros_neg',
          'n34_puros_pos', 'n34_puros_neg']
@@ -112,9 +112,19 @@ for v in variables:
     if v == 'prec':
         fix = 1 # probando con valores sin fix
         fix_clim = 0
-    else:
+        v_in_name = v
+    elif v=='tref':
         fix = 1
         fix_clim = 273
+        v_in_name = v
+    else:
+        fix = 9.8
+        fix_clim = 0
+        check_no_t_pp = True
+        if v == 'hgt750':
+            v_in_name = 'HGT'
+        else:
+            v_in_name = 'hgt'
 
     aux_comps = {}
     aux_num_comps = {}
@@ -123,7 +133,8 @@ for v in variables:
     for c_count, c in enumerate(cases):
         print('comp --------------------------------------------------------- ')
         cases_bin, num_bin, auxx = BinsByCases_noComp(
-            v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c, c_count=c_count,
+            v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
+            c_count=c_count,
             bin_limits=bin_limits,
             bins_by_cases_dmi=bins_by_cases_dmi,
             bins_by_cases_n34=bins_by_cases_n34,
@@ -140,10 +151,20 @@ for v in variables:
                 aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
                 n_count += 1
 
-    neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON_detrend_05.nc')
+    if v == 'hgt':
+        end_name_file = '_05'
+    elif v == 'hgt750':
+        end_name_file = '__detrend_05' # aaaah lrpm
+    else:
+        end_name_file = '_detrend_05'
+
+    neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON{end_name_file}.nc')
     len_neutro = len(neutro.time)
     neutro = neutro.rename({'time': 'position'})
     neutro = neutro.drop_vars(['r', 'L'])
+    if v == 'hgt750':
+        neutro = neutro.rename({'HGT': 'hgt750'})
+        neutro = neutro.sel(P=750)
 
 
     for k in aux_comps.keys(): # son los "cases" de cada categoria
@@ -165,6 +186,15 @@ for v in variables:
         concat = xr.concat([neutro, event], dim='position')
 
         concat['position'] = np.arange(len(concat.position))
+
+        if check_no_t_pp is True:
+            aux = concat.sel(lat=np.arange(-60, 20 + 1))
+            if len(aux.lat.values)==0:
+                aux = concat.sel(lat=np.arange(20 + 1, -60))
+            concat = aux.sel(lon=np.arange(270, 330 + 1))
+
+        if v == 'hgt750':
+            concat = concat.drop_vars('P')
 
         def PermuDatesComposite(n, data=concat, len_neutro=len_neutro):
 
@@ -197,9 +227,9 @@ for v in variables:
         hour = datetime.now().hour
 
         if (hour > 19) | (hour < 8):
-            n_proc = 30
-        else:
             n_proc = 20
+        else:
+            n_proc = 10
 
         print(f'Procesos: {n_proc}')
 
