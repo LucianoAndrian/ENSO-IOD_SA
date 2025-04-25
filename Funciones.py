@@ -2168,7 +2168,10 @@ def BinsByCases_noComp(v, v_name, fix_factor, s, mm, c, c_count,
     print('1.1 Climatología y case')
     if v != 'hgt':
         end_nc_file = '_detrend_05.nc'
-        # end_nc_file = '_no_detrend_05.nc'
+        if v == 'hgt750': # que maravilla...
+            end_nc_file = '__detrend_05.nc'
+        #end_nc_file = '_no_detrend_05.nc'
+
     else:
         end_nc_file = '_05.nc'
 
@@ -2198,6 +2201,12 @@ def BinsByCases_noComp(v, v_name, fix_factor, s, mm, c, c_count,
         print(f"case {c}, no encontrado para {v}")
         aux = clim.mean('time').__mul__(0)
         return aux, aux, aux
+
+    try:
+        clim = clim.sel(P=750)
+        case = case.sel(P=750)
+    except:
+        pass
 
     if v == 'tref' or v == 'prec' or v == 'tsigma':
         lat = np.arange(-60, 20 + 1)

@@ -696,14 +696,15 @@ cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
     SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
+aux_scale_hgt200 = [-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
 
-variables = ['tref', 'prec', 'hgt750']
-aux_scales = [scale_t, scale_pp, aux_scale_hgt]
-aux_cbar = [cbar, cbar_pp, cbar]
-aux_cbar_snr = [cbar_snr_t, cbar_snr_pp, cbar_snr]
+variables = ['tref', 'prec', 'hgt750', 'hgt']
+aux_scales = [scale_t, scale_pp, aux_scale_hgt, aux_scale_hgt200]
+aux_cbar = [cbar, cbar_pp, cbar, cbar]
+aux_cbar_snr = [cbar_snr_t, cbar_snr_pp, cbar_snr, cbar_snr]
 aux_scales_clim = [np.linspace(0,30,11), np.linspace(0, 300, 11),
-                   np.linspace(1.1e5,1.2e5,11)]
-aux_cbar_clim = ['OrRd', 'PuBu', 'OrRd']
+                   np.linspace(1.1e5,1.2e5,11), np.linspace(1.1e5,1.2e5,11)]
+aux_cbar_clim = ['OrRd', 'PuBu', 'OrRd', 'OrRd']
 print('Plot ----------------------------------------------------------------- ')
 for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         variables, aux_scales, aux_cbar, aux_scales_clim, aux_cbar_clim,
@@ -777,8 +778,18 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
 
         print('hgt ---------------------------------------------------------- ')
+        if v == 'hgt':
+            v_in_hgt = 'hgt'
+            scale_in_hgt = aux_scale_hgt200
+            v_name_hgt = 'hgt'
+        else:
+            v_in_hgt = 'hgt750'
+            scale_in_hgt = aux_scale_hgt
+            v_name_hgt = 'HGT'
+
+
         cases_bin_hgt, num_bin_hgt, auxx_hgt = BinsByCases(
-            v='hgt750', v_name='HGT', fix_factor=9.8, s='SON', mm=10, c=c,
+            v=v_in_hgt, v_name=v_name_hgt, fix_factor=9.8, s='SON', mm=10, c=c,
             c_count=c_count,
             bin_limits=bin_limits,
             bins_by_cases_dmi=bins_by_cases_dmi,
@@ -801,7 +812,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
             print(
                 'snr ---------------------------------------------------------- ')
             cases_bin_snr, num_bin_snr, auxx_snr = BinsByCases(
-                v='hgt750', v_name='HGT', fix_factor=9.8, s='SON', mm=10, c=c,
+                v=v_in_hgt, v_name=v_name_hgt, fix_factor=9.8, s='SON', mm=10, c=c,
                 c_count=c_count,
                 bin_limits=bin_limits,
                 bins_by_cases_dmi=bins_by_cases_dmi,
@@ -933,7 +944,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    map='sa', save=save, dpi=dpi,
                                    out_dir=out_dir,
                                    data_ctn=cases_ordenados_hgt,
-                                   levels_ctn = aux_scale_hgt,
+                                   levels_ctn = scale_in_hgt,
                                    color_ctn='k', row_titles=row_titles,
                                    col_titles=col_titles, clim_plot=clim,
                                    clim_cbar=v_cbar_clim,
@@ -949,13 +960,17 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    hatches='...')
 
     # SNR plot
+    if check_t_pp is True:
+        data_ctn_snr = None
+    else:
+        data_ctn_snr = cases_ordenados_snr
     PlotFinal_CompositeByMagnitude(data=cases_ordenados_snr, levels=scale_snr,
                                    cmap=v_cbar_snr, titles=aux_num,
                                    namefig=f'snr_{v}_cfsv2_comp_by_magnitude',
                                    map='sa', save=save, dpi=dpi,
                                    out_dir=out_dir,
-                                   data_ctn=None,
-                                   levels_ctn = np.linspace(-150,150,13),
+                                   data_ctn=data_ctn_snr,
+                                   levels_ctn = scale_snr,
                                    color_ctn='k', row_titles=row_titles,
                                    col_titles=col_titles, clim_plot=clim,
                                    clim_cbar=v_cbar_clim,
