@@ -706,6 +706,7 @@ aux_scales_clim = [np.linspace(0,30,11), np.linspace(0, 300, 11),
                    np.linspace(1.1e5,1.2e5,11), np.linspace(1.1e5,1.2e5,11)]
 aux_cbar_clim = ['OrRd', 'PuBu', 'OrRd', 'OrRd']
 print('Plot ----------------------------------------------------------------- ')
+print('Plot ----------------------------------------------------------------- ')
 for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         variables, aux_scales, aux_cbar, aux_scales_clim, aux_cbar_clim,
         aux_cbar_snr):
@@ -870,8 +871,10 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
             lat_aux = lat
             lon_aux = lon
         else:
-            lat_aux = lat_hgt
+            lat_aux = lat_hgt[::-1]
             lon_aux = lon_hgt
+            if v == 'hgt750':
+                lat_aux = lat_hgt
 
         da = xr.DataArray(aux, dims=["lat", "lon"],
                           coords={"lat": lat_aux,
@@ -883,10 +886,25 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                       "lon": lon_aux},
                               name="var")
 
+        if len(da.sel(lat=slice(-60, 20)).lat.values)>0:
+            da = da.sel(lat=slice(-60, 20), lon=slice(275, 330))
+            da_snr = da_snr.sel(lat=slice(-60, 20), lon=slice(275, 330))
+        else:
+            da = da.sel(lat=slice(20, -60), lon=slice(275, 330))
+            da_snr = da_snr.sel(lat=slice(20, -60), lon=slice(275, 330))
+
+
         try:
             aux_sig = xr.open_dataset(
                 f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
+            aux_sig['lat'] = aux_sig['lat'][::-1]
 
+            # if len(aux_sig.sel(lat=slice(-60, 20)).lat.values) > 0:
+            #     aux_sig = aux_sig.sel(lat=slice(-60, 20), lon=slice(275, 330))
+            # else:
+            #     aux_sig = aux_sig.sel(lat=slice(20, -60), lon=slice(275, 330))
+            #
+            # aux_sig = aux_sig.sel(lat=lat, lon=lon)
             da_sig = da.where((da < aux_sig[v][0]) |
                               (da > aux_sig[v][1]))
             da_sig = da_sig.where(np.isnan(da_sig), 1)
@@ -900,17 +918,6 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
             da_hgt = da_hgt.sel(lat=slice(None, None, -1))
 
             cases_ordenados_hgt.append(da_hgt)
-        else:
-            if v == 'hgt':
-                da['lat'] = da['lat'][::-1]
-                da_snr['lat'] = da_snr['lat'][::-1]
-            da_sig['lat'] = da_sig['lat'][::-1]
-
-
-            da = da.sel(lat=lat, lon=lon)
-            da_snr = da_snr.sel(lat=lat, lon=lon)
-            da_sig = da_sig.sel(lat=lat, lon=lon)
-
 
         cases_ordenados.append(da)
         cases_ordenados_snr.append(da_snr)
@@ -920,6 +927,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     cases_ordenados_snr = xr.concat(cases_ordenados_snr, dim='plots')
     cases_ordenados_sig = xr.concat(cases_ordenados_sig, dim='plots')
 
+
     if check_t_pp is True:
         cases_ordenados_hgt = xr.concat(cases_ordenados_hgt, dim='plots')
         ocean_mask = True
@@ -927,6 +935,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         cases_ordenados_hgt = xr.concat(cases_ordenados, dim='plots')
         clim = clim_hgt
         ocean_mask = False
+
 
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
                                    cmap=v_cbar, titles=aux_num,
