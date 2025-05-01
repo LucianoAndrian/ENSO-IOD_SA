@@ -525,142 +525,163 @@ print('                                                                       ')
 
 # ---------------------------------------------------------------------------- #
 print('# CFSv2 Composite --------------------------------------------------- #')
-variables = ['tref', 'prec']
-aux_scales = [scale_t, scale_pp]
-#aux_scales = [scale_t_val, scale_pp_val]
-aux_cbar = [cbar, cbar_pp]
-aux_cbar_snr = [cbar_snr_t, cbar_snr_pp]
+aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
+aux_scale_hgt200 = [-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
 
-variables_hgt = ['hgt', 'hgt750'] # vamos a necesitar otro nivel?
-aux_cbar_hgt = [cbar, cbar]
+variables = ['tref', 'prec', 'hgt750', 'hgt']
+aux_scales = [scale_t, scale_pp, aux_scale_hgt, aux_scale_hgt200]
+aux_cbar = [cbar, cbar_pp, cbar, cbar]
+aux_cbar_snr = [cbar_snr_t, cbar_snr_pp, cbar_snr, cbar_snr]
 
-for v, v_scale, v_cbar, v_cbar_snr in zip(variables, aux_scales, aux_cbar,
-                                          aux_cbar_snr):
+for v, v_scale, v_cbar, v_cbar_snr in zip(
+        variables, aux_scales, aux_cbar, aux_cbar_snr):
+
+    use_hgt750 = False
     if v == 'prec':
         fix = 30
-    else:
+        v_in_name = v
+        scale_in_hgt = aux_scale_hgt
+        use_hgt750 = True
+        end_name_file = '_detrend_05'
+    elif v == 'tref':
         fix = 1
+        v_in_name = v
+        scale_in_hgt = aux_scale_hgt
+        use_hgt750 = True
+        end_name_file = '_detrend_05'
+    else:
+        fix = 9.8
+        if v == 'hgt750':
+            v_in_name = 'HGT'
+            scale_in_hgt = aux_scale_hgt
+            end_name_file = '__detrend_05'
+        else:
+            v_in_name = 'hgt'
+            scale_in_hgt = aux_scale_hgt200
+            end_name_file = '_05'
 
     data_neutro = xr.open_dataset(
-        f'{cases_dir}{v}_neutros_SON_detrend_05.nc')*fix
+        f'{cases_dir}{v}_neutros_SON{end_name_file}.nc') * fix
     data_neutro = data_neutro.rename({list(data_neutro.data_vars)[0]: 'var'})
 
-    for v_hgt, v_hgt_cbar in zip(
-            variables_hgt, aux_cbar_hgt):
-
-        if v_hgt == 'hgt750':
-            end_name_file =  '__detrend_05' # es igual al otro es solo el nombre
-            aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
-        else:
-            end_name_file = '_05'
-            aux_scale_hgt = [-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
-
+    if use_hgt750 is True:
         neutro_hgt = xr.open_dataset(
-            f'{cases_dir}{v_hgt}_neutros_SON{end_name_file}.nc')
+            f'{cases_dir}hgt750_neutros_SON__detrend_05.nc')
 
         neutro_hgt = neutro_hgt.rename({list(neutro_hgt.data_vars)[0]: 'var'})
-
         neutro_hgt = Weights(neutro_hgt.__mul__(9.80665))
         neutro_hgt = neutro_hgt.rename({list(neutro_hgt.data_vars)[0]: 'var'})
 
-        aux_data = []
-        aux_data_snr = []
-        aux_hgt = []
-        aux_hgt_snr = []
-        aux_num_cases = []
-        aux_var_sig = []
+    aux_data = []
+    aux_data_snr = []
+    aux_hgt = []
+    aux_hgt_snr = []
+    aux_num_cases = []
+    aux_var_sig = []
+    for c in cases_cfsv2:
+        case = xr.open_dataset(f'{cases_dir}{v}_{c}_SON{end_name_file}.nc')
+        case = case.rename({list(case.data_vars)[0]: 'var'})
+        case = case * fix
+        num_case = len(case.time)
+        aux_num_cases.append(num_case)
+        comp = case.mean('time') - data_neutro.mean('time')
 
-        for c in cases_cfsv2:
-            case = xr.open_dataset(f'{cases_dir}{v}_{c}_SON_detrend_05.nc')
-            case = case.rename({list(case.data_vars)[0]: 'var'})
-            case = case*fix
-
+        try:
             case_sig = xr.open_dataset(
-                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc')*fix
+                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2{end_name_file}.nc') * fix
+        except:
+            case_sig = xr.open_dataset(
+                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
 
+
+        sig = comp.where((comp < case_sig[v_in_name][0]) |
+                         (comp > case_sig[v_in_name][1]))
+        sig = sig.where(np.isnan(sig['var']), 1)
+
+        aux_spread = case - comp
+        aux_spread = aux_spread.std('time')
+        snr = comp / aux_spread
+
+        try:
+            comp = comp.sel(P=750)
+            snr = snr.sel(P=750)
+            sig = sig.sel(P=750)
+        except:
+            pass
+
+        try:
+            comp = comp.drop('P')
+            snr = snr.drop('P')
+            sig = sig.drop('P')
+        except:
+            pass
+
+        aux_data.append(comp)
+        aux_data_snr.append(snr)
+        aux_var_sig.append(sig)
+
+        if use_hgt750:
             case_hgt = xr.open_dataset(
-                f'{cases_dir}{v_hgt}_{c}_SON{end_name_file}.nc')
+                f'{cases_dir}hgt750_{c}_SON__detrend_05.nc')
             case_hgt = case_hgt.rename({list(case_hgt.data_vars)[0]: 'var'})
             case_hgt = Weights(case_hgt.__mul__(9.80665))
-
-            #case = Weights(case.__mul__(9.80665))
-            num_case = len(case.time)
-            aux_num_cases.append(num_case)
-
-            comp = case.mean('time') - data_neutro.mean('time')
             comp_hgt = case_hgt.mean('time') - neutro_hgt.mean('time')
-
-            sig = comp.where((comp < case_sig[v][0]) |
-                             (comp > case_sig[v][1]))
-            sig = sig.where(np.isnan(sig['var']), 1)
-
-            aux_spread = case - comp
-            aux_spread = aux_spread.std('time')
-            snr = comp / aux_spread
 
             aux_spread = case_hgt - comp_hgt
             aux_spread = aux_spread.std('time')
             snr_hgt = comp_hgt / aux_spread
 
-            try:
-                comp_hgt = comp_hgt.sel(P=750)
-                snr_hgt = snr_hgt.sel(P=750)
-            except:
-                pass
+        try:
+            comp_hgt = comp_hgt.sel(P=750)
+            snr_hgt = snr_hgt.sel(P=750)
+        except:
+            pass
 
-            aux_data.append(comp)
-            aux_data_snr.append(snr)
+        if use_hgt750 is True:
             aux_hgt.append(comp_hgt)
             aux_hgt_snr.append(snr_hgt)
-            aux_var_sig.append(sig)
 
+    aux_data = xr.concat(aux_data, dim='plots')
+    aux_data_snr = xr.concat(aux_data_snr, dim='plots')
+
+    aux_var_sig = xr.concat(aux_var_sig, dim='plots')
+
+    if use_hgt750 is True:
         aux_hgt = xr.concat(aux_hgt, dim='plots')
         aux_hgt_snr = xr.concat(aux_hgt_snr, dim='plots')
 
-        aux_data = xr.concat(aux_data, dim='plots')
-        aux_data_snr = xr.concat(aux_data_snr, dim='plots')
+    if use_hgt750 is True:
+        namefig = f"comp_cfsv2_{v}_750"
+        namefig = f"comp_snr_cfsv2_{v}_750"
+        ocean_mask = True
+        data_snr_ctn = None
+    else:
+        namefig = f"comp_cfsv2_{v}_"
+        namefig = f"comp_snr_cfsv2_{v}_"
+        aux_hgt = aux_data
+        ocean_mask = False
+        data_snr_ctn = aux_data_snr
 
-        aux_var_sig = xr.concat(aux_var_sig, dim='plots')
 
-        PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
-                  titles=title_case, namefig=f"comp_cfsv2_{v}_{v_hgt}", map='sa',
-                  save=save, dpi=dpi, out_dir=out_dir,
-                  data_ctn=aux_hgt, color_ctn='k',
-                  high=3, width=7, num_cols=3,
-                  num_cases=True, num_cases_data=aux_num_cases,
-                  levels_ctn=aux_scale_hgt, ocean_mask=True,
-                  data_ctn_no_ocean_mask=True,
-                  sig_points=aux_var_sig, hatches='...')
+    PlotFinal(data=aux_data, levels=v_scale, cmap=v_cbar,
+              titles=title_case, namefig=namefig, map='sa',
+              save=save, dpi=dpi, out_dir=out_dir,
+              data_ctn=aux_hgt, color_ctn='k',
+              high=3, width=7, num_cols=3,
+              num_cases=True, num_cases_data=aux_num_cases,
+              levels_ctn=scale_in_hgt, ocean_mask=ocean_mask,
+              data_ctn_no_ocean_mask=True,
+              sig_points=aux_var_sig, hatches='...')
 
-        if v_hgt == variables_hgt[0]:
-            PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
-                      titles=title_case, namefig=f"comp_snr_cfsv2_{v}_{v_hgt}",
-                      map='sa',
-                      save=save, dpi=dpi, out_dir=out_dir,
-                      data_ctn=None, color_ctn='k',
-                      high=3, width=7, num_cols=3,
-                      num_cases=True, num_cases_data=aux_num_cases,
-                      levels_ctn=aux_scale_hgt, ocean_mask=True,
-                      data_ctn_no_ocean_mask=True)
-
-        if v == variables[0]:
-            PlotFinal(data=aux_hgt, levels=aux_scale_hgt, cmap=v_hgt_cbar,
-                      titles=title_case, namefig=f"comp_cfsv2_{v_hgt}_{v}",
-                      map='sa',
-                      save=save, dpi=dpi, out_dir=out_dir,
-                      data_ctn=aux_hgt, color_ctn='k',
-                      high=3, width=7, num_cols=3,
-                      num_cases=True, num_cases_data=aux_num_cases,
-                      levels_ctn=aux_scale_hgt, ocean_mask=False)
-
-            PlotFinal(data=aux_hgt_snr, levels=scale_snr, cmap=cbar_snr,
-                      titles=title_case, namefig=f"comp_snr_cfsv2_{v_hgt}_{v}",
-                      map='sa',
-                      save=save, dpi=dpi, out_dir=out_dir,
-                      data_ctn=aux_hgt_snr, color_ctn='k',
-                      high=3, width=7, num_cols=3,
-                      num_cases=True, num_cases_data=aux_num_cases,
-                      levels_ctn=scale_snr, ocean_mask=False)
+    PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
+              titles=title_case, namefig=namefig,
+              map='sa',
+              save=save, dpi=dpi, out_dir=out_dir,
+              data_ctn=data_snr_ctn, color_ctn='k',
+              high=3, width=7, num_cols=3,
+              num_cases=True, num_cases_data=aux_num_cases,
+              levels_ctn=scale_snr, ocean_mask=ocean_mask,
+              data_ctn_no_ocean_mask=True)
 
 print('Done CFSv2 Composite ------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
