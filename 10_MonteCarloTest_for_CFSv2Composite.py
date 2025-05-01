@@ -6,7 +6,7 @@ save = False
 out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
            'CFSv2_nc_quantiles/')
 
-variables = ['prec', 'tref']
+variables = ['prec', 'tref', 'hgt', 'hgt750']
 
 cases = ['sim_pos', 'sim_neg',
          'dmi_puros_pos', 'dmi_puros_neg',
@@ -80,7 +80,19 @@ def NumberPerts(data_to_concat, neutro, num = 0):
 for v in variables:
     print(v)
 
-    neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON_detrend_05.nc')
+    if v == 'hgt':
+        neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON_05.nc')
+    elif v == 'hgt750':
+        neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON__detrend_05.nc')
+    else:
+        neutro = xr.open_dataset(f'{dir_events}{v}_neutros_SON_detrend_05.nc')
+
+    if v == 'hgt' or v == 'hgt750':
+        if len(neutro.sel(lat=slice(-60, 20)).lat.values) > 0:
+            neutro = neutro.sel(lat=slice(-60, 20), lon=slice(275, 330))
+        else:
+            neutro = neutro.sel(lat=slice(20, -60), lon=slice(275, 330))
+
     len_neutro = len(neutro.time)
     neutro = neutro.rename({'time': 'position'})
     neutro = neutro.drop_vars(['r', 'L'])
@@ -99,7 +111,20 @@ for v in variables:
                     print('Error: ' + f)
 
         # -------------------------------------------------------------------- #
-        event = xr.open_dataset(f'{dir_events}{v}_{c}_SON_no_detrend.nc')
+        if v == 'hgt':
+            event = xr.open_dataset(f'{dir_events}{v}_{c}_SON_05.nc')
+        elif v == 'hgt750':
+            event = xr.open_dataset(f'{dir_events}{v}_{c}_SON__detrend_05.nc')
+        else:
+            event = xr.open_dataset(f'{dir_events}{v}_{c}_SON_detrend_05.nc')
+
+        if v == 'hgt' or v == 'hgt750':
+            if len(event.sel(lat=slice(-60, 20)).lat.values) > 0:
+                event = event.sel(lat=slice(-60, 20), lon=slice(275, 330))
+            else:
+                event = event.sel(lat=slice(20, -60), lon=slice(275, 330))
+
+
         event = event.rename({'time': 'position'})
         event = event.drop_vars(['r', 'L'])
 
