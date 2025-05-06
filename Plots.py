@@ -652,12 +652,12 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(
 
     if use_hgt750 is True:
         namefig = f"comp_cfsv2_{v}_750"
-        namefig = f"comp_snr_cfsv2_{v}_750"
+        namefig_snr = f"comp_snr_cfsv2_{v}_750"
         ocean_mask = True
         data_snr_ctn = None
     else:
         namefig = f"comp_cfsv2_{v}_"
-        namefig = f"comp_snr_cfsv2_{v}_"
+        namefig_snr = f"comp_snr_cfsv2_{v}_"
         aux_hgt = aux_data
         ocean_mask = False
         data_snr_ctn = aux_data_snr
@@ -674,7 +674,7 @@ for v, v_scale, v_cbar, v_cbar_snr in zip(
               sig_points=aux_var_sig, hatches='...')
 
     PlotFinal(data=aux_data_snr, levels=scale_snr, cmap=v_cbar_snr,
-              titles=title_case, namefig=namefig,
+              titles=title_case, namefig=namefig_snr,
               map='sa',
               save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=data_snr_ctn, color_ctn='k',
