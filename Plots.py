@@ -5,7 +5,7 @@ Figuras ENSO-IOD-SA
 save = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 plot_bins = False
-plot_bins_2d = False
+plot_bins_2d = True
 plot_pdf = False
 # ---------------------------------------------------------------------------- #
 import os
@@ -218,6 +218,24 @@ cbar_snr_pp = colors.ListedColormap(['#a97300', '#bb8938', '#cc9f5f',
 cbar_snr_pp.set_under('#6A3D07')
 cbar_snr_pp.set_over('#1E6D5A')
 cbar_snr_pp.set_bad(color='white')
+
+cbar_bins2d = colors.ListedColormap(['#9B1C00', '#CD4838', '#E25E55',
+                              '#F28C89', '#FFCECC',
+                              'white', 'white',
+                              '#B3DBFF', '#83B9EB', '#5E9AD7', '#3C7DC3',
+                              '#014A9B'][::-1])
+cbar_bins2d.set_over('#641B00')
+cbar_bins2d.set_under('#012A52')
+cbar_bins2d.set_bad(color='white')
+
+cbar_pp_bins2d = colors.ListedColormap(['#003C30', '#004C42', '#0C7169', '#79C8BC',
+                                 '#B4E2DB',
+                                 'white', 'white',
+                                '#F1DFB3', '#DCBC75', '#995D13', '#6A3D07',
+                                 '#543005', ][::-1])
+cbar_pp_bins2d.set_under('#3F2404')
+cbar_pp_bins2d.set_over('#00221A')
+cbar_pp_bins2d.set_bad(color='white')
 
 # Variables comunes ---------------------------------------------------------- #
 #sig = True
@@ -1012,6 +1030,10 @@ box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
 box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40]]
 box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295]]
 
+box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia', 'Aux_20']
+box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40], [-25, -15]]
+box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295], [305, 320]]
+
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
          'sim_pos', 'sim_neg', #sim misma fase
@@ -1152,7 +1174,7 @@ if plot_bins_2d:
     cases = ['dmi_puros_pos', 'dmi_puros_neg',
              'n34_puros_pos', 'n34_puros_neg',
              'sim_pos', 'sim_neg',
-             'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
+             #'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
              'neutros']
 
     indices = ['n34', 'dmi']
@@ -1174,10 +1196,14 @@ if plot_bins_2d:
     box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
                 [287, 294]]
 
+    t_scale = [-0.75, -0.625, -0.5, -0.375, -0.25, -0.1, 0,
+               0.1, 0.25, 0.375, 0.5, 0.625, 0.75 ]
+    pp_cale = [-15.0, -12.5, -10.0, -7.5, -5.0, -1, 0.0,
+               1, 5.0, 7.5, 10.0, 12.5, 15.0]
+
     for v, v_scale, v_cbar in zip(['prec', 'tref'],
-                                  [np.linspace(-15, 15, 13),
-                                   np.linspace(-1, 1, 13)],
-                                  ['BrBG', 'RdBu_r']):
+                                  [pp_cale, t_scale],
+                                  [cbar_pp_bins2d, cbar_bins2d]):
 
         if v == 'prec':
             fix = 30
@@ -1239,7 +1265,6 @@ if plot_bins_2d:
                 reshape(len(bin_limits), len(bin_limits))
 
             PlotBins2D(cases_ordenados, num_ordenados,
-                       vmin=min(v_scale), vmax=max(v_scale),
                        levels=v_scale, cmap=v_cbar,
                        color_thr=color_thr,
                        title=f'{v} {units} - {bn}',

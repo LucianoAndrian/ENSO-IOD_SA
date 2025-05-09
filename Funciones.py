@@ -4408,16 +4408,23 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
 
 ################################################################################
 # Bins 2D ######################################################################
-def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
+from matplotlib.colors import BoundaryNorm
+
+
+def PlotBins2D(cases_ordenados, num_ordenados, levels, cmap,
                color_thr, title, save=False, name_fig='fig', out_dir='~/',
                dpi=100, bin_limits=None):
-
     cases_ordenados = np.flip(cases_ordenados)
     num_ordenados = np.flip(num_ordenados)
 
+    cmap = plt.get_cmap(cmap)  # debe ser objeto colormap no solo str
+
     fig = plt.figure(dpi=dpi, figsize=(8, 7))
     ax = fig.add_subplot(111)
-    im = ax.imshow(cases_ordenados, cmap=cmap, vmin=vmin, vmax=vmax)
+
+    norm = BoundaryNorm(levels, cmap.N, clip=True)
+
+    im = ax.imshow(cases_ordenados, cmap=cmap, norm=norm)
 
     for i in range(0, len(bin_limits)):
         for j in range(0, len(bin_limits)):
@@ -4425,17 +4432,16 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
                 color_num = 'white'
             else:
                 color_num = 'k'
-            if (~np.isnan(num_ordenados[i, j])) and (num_ordenados[i, j]!=0):
+            if (~np.isnan(num_ordenados[i, j])) and (num_ordenados[i, j] != 0):
                 ax.text(j, i, num_ordenados[i, j].astype(np.int64),
                         ha='center', va='center', color=color_num)
 
-
-    xylimits=[-.5, -.5+len(bin_limits)]
+    xylimits = [-.5, -.5 + len(bin_limits)]
     ax.set_xlim(xylimits[::-1])
     ax.set_ylim(xylimits)
 
-    original_ticks = np.arange(-.5, -.5+len(bin_limits)+0.5)
-    new_tickx=np.unique(bin_limits)
+    original_ticks = np.arange(-.5, -.5 + len(bin_limits) + 0.5)
+    new_tickx = np.unique(bin_limits)
     ax.set_xticks(original_ticks, new_tickx)
     ax.set_yticks(original_ticks, new_tickx)
 
@@ -4443,8 +4449,9 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
     ax.set_xlabel('DMI - SST index (of std)', fontsize=11)
     fig.suptitle(title, size=12)
 
-    inf_neutro_border = original_ticks[int(np.floor(len(original_ticks)/2))]-1
-    upp_neutro_border = original_ticks[int(np.ceil(len(original_ticks)/2))]
+    inf_neutro_border = original_ticks[
+                            int(np.floor(len(original_ticks) / 2))] - 1
+    upp_neutro_border = original_ticks[int(np.ceil(len(original_ticks) / 2))]
     plt.axhline(y=inf_neutro_border, color='k', linestyle='-', linewidth=2)
     plt.axhline(y=upp_neutro_border, color='k', linestyle='-', linewidth=2)
     plt.axvline(x=inf_neutro_border, color='k', linestyle='-', linewidth=2)
@@ -4462,6 +4469,7 @@ def PlotBins2D(cases_ordenados, num_ordenados, vmin, vmax, levels, cmap,
         plt.close()
     else:
         plt.show()
+
 
 ################################################################################
 # SetBinsByCases ###############################################################
