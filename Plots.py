@@ -26,7 +26,7 @@ warnings.filterwarnings("ignore")
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
     SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, \
-    SetBinsByCases, AreaBetween, PlotPDFTable
+    SetBinsByCases, AreaBetween, PlotPDFTable, PlotFinalTwoVariables
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -77,6 +77,36 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
             return aux2
     else:
         return aux
+
+
+def OpenAndSetRegre(v, data_dir_proc=data_dir_proc):
+    print(
+        f'{v} ------------------------------------------------------------- ')
+    regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v}_regre_n34.nc')
+    regre_corr_n34 = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_n34_corr.nc')
+    regre_dmi = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_dmi.nc')
+    regre_corr_dmi = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_dmi_corr.nc')
+    regre_n34_wodmi = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_n34_wodmi.nc')
+    regre_corr_n34_wodmi = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_n34_wodmi_corr.nc')
+    regre_dmi_won34 = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_dmi_won34.nc')
+    regre_corr_dmi_won34 = xr.open_dataset(
+        f'{data_dir_proc}regre/{v}_regre_dmi_won34_corr.nc')
+
+    regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, regre_n34_wodmi, \
+        regre_corr_n34_wodmi, regre_dmi_won34, regre_corr_dmi_won34 = \
+        RenameDataset('var', regre_n34, regre_corr_n34, regre_dmi,
+                      regre_corr_dmi, regre_n34_wodmi, regre_corr_n34_wodmi,
+                      regre_dmi_won34, regre_corr_dmi_won34)
+
+    return regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, \
+        regre_n34_wodmi, regre_corr_n34_wodmi, regre_dmi_won34, \
+        regre_corr_dmi_won34
 # Scales and colorbars ------------------------------------------------------- #
 # Regresion ------------------------------------------------------------------ #
 scale_hgt = [-300, -200, -100, -50, -25, 0, 25, 50, 100, 200, 300]
@@ -353,189 +383,256 @@ print('# Regresion --------------------------------------------------------- #')
 t_critic = 1.66  # es MUY similar (2 digitos) para ambos períodos
 r_crit = np.sqrt(1 / (((np.sqrt((p[1] - p[0]) - 2) / t_critic) ** 2) + 1))
 
-variables = ['prec', 'temp', 'hgt200', 'hgt750']
-aux_scales = [scale_pp, scale_t, scale_hgt, scale_hgt_750]
-aux_cbar = [cbar_pp, cbar, cbar, cbar]
-for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
-    print(f'{v} ------------------------------------------------------------- ')
-    regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v}_regre_n34.nc')
-    regre_corr_n34 = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_n34_corr.nc')
-    regre_dmi = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_dmi.nc')
-    regre_corr_dmi = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_dmi_corr.nc')
-    regre_n34_wodmi = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_n34_wodmi.nc')
-    regre_corr_n34_wodmi = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_n34_wodmi_corr.nc')
-    regre_dmi_won34 = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_dmi_won34.nc')
-    regre_corr_dmi_won34 = xr.open_dataset(
-        f'{data_dir_proc}regre/{v}_regre_dmi_won34_corr.nc')
 
-    regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, regre_n34_wodmi, \
-        regre_corr_n34_wodmi, regre_dmi_won34, regre_corr_dmi_won34 = \
-        RenameDataset('var', regre_n34, regre_corr_n34, regre_dmi,
-                      regre_corr_dmi, regre_n34_wodmi, regre_corr_n34_wodmi,
-                      regre_dmi_won34, regre_corr_dmi_won34)
+regre_n34_prec, regre_corr_n34_prec, regre_dmi_prec, regre_corr_dmi_prec, \
+        regre_n34_wodmi_prec, regre_corr_n34_wodmi_prec, regre_dmi_won34_prec, \
+        regre_corr_dmi_won34_prec = OpenAndSetRegre('prec')
 
-    aux_sig = SetDataToPlotFinal(
-        regre_n34 * MakerMaskSig(regre_corr_n34, r_crit),
-        regre_dmi * MakerMaskSig(regre_corr_dmi, r_crit),
-        regre_n34_wodmi * MakerMaskSig(regre_corr_n34_wodmi, r_crit),
-        regre_dmi_won34 * MakerMaskSig(regre_corr_dmi_won34, r_crit))
+regre_n34_temp, regre_corr_n34_temp, regre_dmi_temp, regre_corr_dmi_temp, \
+        regre_n34_wodmi_temp, regre_corr_n34_wodmi_temp, regre_dmi_won34_temp, \
+        regre_corr_dmi_won34_temp = OpenAndSetRegre('temp')
 
-    aux_v = SetDataToPlotFinal(regre_n34, regre_dmi, regre_n34_wodmi,
-                               regre_dmi_won34)
+aux_sig = SetDataToPlotFinal(
+    regre_n34_prec * MakerMaskSig(regre_corr_n34_prec, r_crit),
+    regre_n34_wodmi_prec * MakerMaskSig(regre_corr_n34_wodmi_prec, r_crit),
+    regre_dmi_prec * MakerMaskSig(regre_corr_dmi_prec, r_crit),
+    regre_dmi_won34_prec * MakerMaskSig(regre_corr_dmi_won34_prec, r_crit),
+    regre_n34_temp * MakerMaskSig(regre_corr_n34_temp, r_crit),
+    regre_n34_wodmi_temp * MakerMaskSig(regre_corr_n34_wodmi_temp, r_crit),
+    regre_dmi_temp * MakerMaskSig(regre_corr_dmi_temp, r_crit),
+    regre_dmi_won34_temp * MakerMaskSig(regre_corr_dmi_won34_temp, r_crit)
+)
 
-    ocean_mask = False # prec y temp son solo sobre tierra
-    if v == 'prec' or v == 'temp':
-        add_hgt = True
-        data_ctn2_no_ocean_mask = True
-    else:
-        add_hgt = False
-        data_ctn2_no_ocean_mask = False
+aux_v = SetDataToPlotFinal(regre_n34_prec, regre_n34_wodmi_prec,
+                           regre_dmi_prec, regre_dmi_won34_prec,
+                           regre_n34_temp, regre_n34_wodmi_temp,
+                           regre_dmi_temp, regre_dmi_won34_temp)
 
-    if add_hgt is True:
-        v2 = 'hgt750'
-        regre_n34 = xr.open_dataset(f'{data_dir_proc}regre/{v2}_regre_n34.nc')
-        regre_corr_n34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_n34_corr.nc')
-        regre_dmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_dmi.nc')
-        regre_corr_dmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_dmi_corr.nc')
-        regre_n34_wodmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_n34_wodmi.nc')
-        regre_corr_n34_wodmi = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_n34_wodmi_corr.nc')
-        regre_dmi_won34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_dmi_won34.nc')
-        regre_corr_dmi_won34 = xr.open_dataset(
-            f'{data_dir_proc}regre/{v2}_regre_dmi_won34_corr.nc')
+regre_n34_hgt750, regre_corr_n34_hgt750, regre_dmi_hgt750, \
+    regre_corr_dmi_hgt750, regre_n34_wodmi_hgt750, \
+    regre_corr_n34_wodmi_hgt750, regre_dmi_won34_hgt750, \
+    regre_corr_dmi_won34_hgt750 = OpenAndSetRegre('hgt750')
 
-        regre_n34, regre_corr_n34, regre_dmi, regre_corr_dmi, regre_n34_wodmi, \
-            regre_corr_n34_wodmi, regre_dmi_won34, regre_corr_dmi_won34 = \
-            RenameDataset('var', regre_n34, regre_corr_n34, regre_dmi,
-                          regre_corr_dmi, regre_n34_wodmi, regre_corr_n34_wodmi,
-                          regre_dmi_won34, regre_corr_dmi_won34)
+aux_hgt750 = SetDataToPlotFinal(
+    regre_n34_hgt750, regre_n34_wodmi_hgt750,
+    regre_dmi_hgt750, regre_dmi_won34_hgt750,
+    regre_n34_hgt750, regre_n34_wodmi_hgt750,
+    regre_dmi_hgt750, regre_dmi_won34_hgt750)
 
-        aux_hgt = SetDataToPlotFinal(regre_n34, regre_dmi, regre_n34_wodmi,
-                                     regre_dmi_won34)
 
-        data_ctn2 = aux_hgt
-        levels_ctn2 = scale_hgt_750
-    else:
-        data_ctn2 = None
-        levels_ctn2 = None
+regre_n34_hgt200, regre_corr_n34_hgt200, regre_dmi_hgt200, \
+    regre_corr_dmi_hgt200, regre_n34_wodmi_hgt200, \
+    regre_corr_n34_wodmi_hgt200, regre_dmi_won34_hgt200, \
+    regre_corr_dmi_won34_hgt200 = OpenAndSetRegre('hgt200')
 
-    if v != 'prec' and v != 'temp':
-        data_ctn = aux_v
-    else:
-        data_ctn = None
+aux_hgt750_200 = SetDataToPlotFinal(
+    regre_n34_hgt750, regre_n34_wodmi_hgt750,
+    regre_dmi_hgt750, regre_dmi_won34_hgt750,
+    regre_n34_hgt200, regre_n34_wodmi_hgt200,
+    regre_dmi_hgt200, regre_dmi_won34_hgt200)
 
-    PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
-              titles=subtitulos_regre, namefig=f'regre_{v}', map='sa',
-              save=save, dpi=dpi, out_dir=out_dir,
-              data_ctn=data_ctn, levels_ctn=v_scale, color_ctn='k',
-              data_ctn2=data_ctn2, levels_ctn2=levels_ctn2,
-              color_ctn2='k', high=3.1, width = 4,
-              sig_points=aux_sig, hatches='...', pdf=True,
-              ocean_mask=ocean_mask,
-              data_ctn2_no_ocean_mask=data_ctn2_no_ocean_mask)
+
+aux_sig_hgt750_200 = SetDataToPlotFinal(
+    regre_n34_hgt750 * MakerMaskSig(regre_corr_n34_hgt750, r_crit),
+    regre_n34_wodmi_hgt750 * MakerMaskSig(regre_corr_n34_wodmi_hgt750, r_crit),
+    regre_dmi_hgt750 * MakerMaskSig(regre_corr_dmi_hgt750, r_crit),
+    regre_dmi_won34_hgt750 * MakerMaskSig(regre_corr_dmi_won34_hgt750, r_crit),
+    regre_n34_hgt200 * MakerMaskSig(regre_corr_n34_hgt200, r_crit),
+    regre_n34_wodmi_hgt200 * MakerMaskSig(regre_corr_n34_wodmi_hgt200, r_crit),
+    regre_dmi_hgt200 * MakerMaskSig(regre_corr_dmi_hgt200, r_crit),
+    regre_dmi_won34_hgt200 * MakerMaskSig(regre_corr_dmi_won34_hgt200, r_crit))
+
+subtitulos_regre = [r"$ONI$", r"$ONI|_{DMI}$", r"$DMI$", r"$DMI|_{ONI}$",
+                    r"$ONI$", r"$ONI|_{DMI}$", r"$DMI$", r"$DMI|_{ONI}$"]
+
+
+PlotFinalTwoVariables(data=aux_v, num_cols=4,
+                      levels_r1=scale_pp, cmap_r1=cbar_pp,
+                      levels_r2=scale_t, cmap_r2=cbar,
+                      data_ctn=aux_hgt750, levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt_750, color_ctn='k',
+                      titles=subtitulos_regre, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=None, hatches=None,
+                      data_ctn_no_ocean_mask=False)
+
+
+PlotFinalTwoVariables(data=aux_hgt750_200, num_cols=4,
+                      levels_r1=scale_hgt_750, cmap_r1=cbar,
+                      levels_r2=scale_hgt, cmap_r2=cbar,
+                      data_ctn=aux_hgt750_200, levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt, color_ctn='k',
+                      titles=subtitulos_regre, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=aux_sig_hgt750_200, hatches='...',
+                      data_ctn_no_ocean_mask=False)
+
 print('Done Regression ------------------------------------------------------ ')
 print(' --------------------------------------------------------------------- ')
 print('                                                                       ')
 
 print('# Obs. Composite ---------------------------------------------------- #')
-variables_tpp = ['tcru_w_c_d_0.25', 'ppgpcc_w_c_d_1']
-plt.rcParams['hatch.linewidth'] = 1
-# hacer funcion con esto
+pos_comp_pp_t=[]
+neg_comp_pp_t=[]
+pos_comp_hgt750_200=[]
+neg_comp_hgt750_200=[]
+pos_comp_pp_t_sig=[]
+neg_comp_pp_t_sig=[]
+pos_comp_hgt750_200_sig=[]
+neg_comp_hgt750_200_sig=[]
+
+pos_comp_hgt750=[]
+neg_comp_hgt750=[]
+for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
+    print(v)
+    if v != 'HGT200' and v != 'HGT750':
+        print('using Opendataset')
+        data = OpenObsDataSet(name=v + '_SON', sa=False)
+        if v == 'ppgpcc_w_c_d_1':
+            lon = data.lon
+            lat = data.lat
+
+    else:
+        data = xr.open_dataset(f'{data_dir}{v}_SON_mer_d_w.nc')
+        data = data.sel(lon=slice(275, 330), lat=slice(20, -65))
 
 
-cases = ['DMI_un_pos', 'N34_un_pos', 'DMI_sim_pos',
-         'DMI_un_neg', 'N34_un_neg', 'DMI_sim_neg']
-
-title_case = ['Pure positive IOD', 'Pure El Niño',  'El Niño - pos. IOD',
-              'Pure negative IOD', 'Pure La Niña', 'La Niña - neg. IOD']
-
-aux_scales = [scale_t, scale_pp]
-#aux_scales = [scale_t_val, scale_pp_val]
-aux_cbar = [cbar, cbar_pp]
-
-variables_hgt = ['HGT200', 'HGT750']
-aux_scales_hgt = [scale_hgt, scale_hgt_750]
-aux_cbar_hgt = [cbar, cbar]
-for v_count, (v, v_scale, v_cbar) in enumerate(
-        zip(variables_tpp,aux_scales, aux_cbar)):
-
-    data = OpenObsDataSet(name=v + '_SON', sa=False)
-
-    # HGT 750
-    for v_hgt, v_hgt_scale, v_hgt_cbar in zip(
-            variables_hgt, aux_scales_hgt, aux_cbar_hgt):
-
-        aux_var = []
-        aux_var_no_sig = []
-        aux_var_sig = []
-        aux_hgt_no_sig = []
-        aux_hgt_sig = []
-
-        data_hgt = xr.open_dataset(f'{data_dir}{v_hgt}_SON_mer_d_w.nc')
-        data_hgt = data_hgt.sel(lon=slice(275, 330), lat=slice(20, -65))
-        for c_count, c in enumerate(cases):
-            comp1, num_case = CaseComp(data, s, mmonth=[9, 11], c=c,
-                                       nc_date_dir=nc_date_dir)
-
+    # Cases ------------------------------------------------------------------ #
+    for c in cases:
+        if v != 'HGT200' and v != 'HGT750':
+            print('using Opendataset')
             data_sig = xr.open_dataset(sig_dir + v.split('_')[0] + '_' + c +
                                        '1940_2020_SON.nc')
+            if v == 'ppgpcc_w_c_d_1':
+                lonsig = data.lon
+                latsig = data.lat
 
-            comp1_i = comp1.interp(lon=data_sig.lon.values,
-                                   lat=data_sig.lat.values)
+        else:
+            data_sig = xr.open_dataset(f'{sig_dir}{v}_{c}1940_2020_{s}.nc')
 
-            # ver esto
-            sig = comp1_i.where((comp1_i < data_sig['var'][0]) |
-                                (comp1_i > data_sig['var'][1]))
-            sig = sig.where(np.isnan(sig['var']), 1)
+        comp1, num_case = CaseComp(data, s, mmonth=[9, 11], c=c,
+                                   nc_date_dir=nc_date_dir)
 
-            aux_var_no_sig.append(comp1)
-            aux_var_sig.append(sig)
+        if v == 'tcru_w_c_d_0.25':
+            comp1 = comp1.sel(lat=slice(None, None, -1))
+            comp1 = comp1.interp(lon=lon, lat=lat)
+            data_sig = data_sig.sel(lat=slice(None, None, -1))
+            data_sig = data_sig.interp(lon=lonsig, lat=latsig)
 
-            # hgt: # se puede usar el two_variables...
-            comp1, num_case = CaseComp(data_hgt, s, mmonth=[9, 11], c=c,
-                                       nc_date_dir=nc_date_dir)
+        comp1_i = comp1.interp(lon=data_sig.lon, lat=data_sig.lat)
 
-            data_sig = xr.open_dataset(f'{sig_dir}{v_hgt}_{c}1940_2020_{s}.nc')
+        sig = comp1.where((comp1_i < data_sig['var'][0]) |
+                            (comp1_i > data_sig['var'][1]))
+        sig = sig.where(np.isnan(sig['var']), 1)
 
-            sig = comp1.where((comp1 < data_sig['var'][0]) |
-                              (comp1 > data_sig['var'][1]))
-            sig = sig.where(np.isnan(sig['var']), 1)
+        if v != 'HGT200' and v != 'HGT750':
+            if 'pos' in c:
+                pos_comp_pp_t.append(comp1)
+                pos_comp_pp_t_sig.append(sig)
+            else:
+                neg_comp_pp_t.append(comp1)
+                neg_comp_pp_t_sig.append(sig)
+        else:
+            if 'pos' in c:
+                pos_comp_hgt750_200.append(comp1)
+                pos_comp_hgt750_200_sig.append(sig)
+            else:
+                neg_comp_hgt750_200.append(comp1)
+                neg_comp_hgt750_200_sig.append(sig)
 
-            aux_hgt_no_sig.append(comp1)
-            aux_hgt_sig.append(sig)
+        if v == 'HGT750':
+            if 'pos' in c:
+                pos_comp_hgt750.append(comp1)
+            else:
+                neg_comp_hgt750.append(comp1)
 
-        aux_var_no_sig = xr.concat(aux_var_no_sig, dim='plots')
-        aux_var_sig = xr.concat(aux_var_sig, dim='plots')
-        aux_hgt_no_sig = xr.concat(aux_hgt_no_sig, dim='plots')
-        aux_hgt_sig = xr.concat(aux_hgt_sig, dim='plots')
 
-        PlotFinal(data=aux_var_no_sig, levels=v_scale, cmap=v_cbar,
-                  titles=title_case, namefig=f'comp_obs_{v}', map='sa',
-                  save=save, dpi=dpi, out_dir=out_dir,
-                  data_ctn=None, levels_ctn=v_scale, color_ctn='k',
-                  data_ctn2=aux_hgt_no_sig, levels_ctn2=v_hgt_scale,
-                  color_ctn2='k', high=3, width=7, num_cols=3, pdf=True,
-                  sig_points=aux_var_sig, hatches='...', ocean_mask=True,
-                  data_ctn2_no_ocean_mask=True)
+pos_comp_pp_t_toplot = xr.concat(pos_comp_pp_t, dim='plots')
+pos_comp_pp_t_sig_toplot = xr.concat(pos_comp_pp_t_sig, dim='plots')
 
-        PlotFinal(data=aux_hgt_no_sig, levels=v_hgt_scale, cmap=v_hgt_cbar,
-                  titles=title_case, namefig=f'comp_obs_solo_{v_hgt}', map='sa',
-                  save=save, dpi=dpi, out_dir=out_dir,
-                  data_ctn=aux_hgt_no_sig, levels_ctn=v_hgt_scale, color_ctn='k',
-                  data_ctn2=None, levels_ctn2=None,
-                  color_ctn2=None, high=3, width=7, num_cols=3, pdf=True,
-                  sig_points=aux_hgt_sig, hatches='...', ocean_mask=False)
+neg_comp_pp_t_toplot = xr.concat(neg_comp_pp_t, dim='plots')
+neg_comp_pp_t_sig_toplot = xr.concat(neg_comp_pp_t_sig, dim='plots')
+
+pos_comp_hgt750_200_toplot = xr.concat(pos_comp_hgt750_200, dim='plots')
+pos_comp_hgt750_200_sig_toplot = xr.concat(pos_comp_hgt750_200_sig, dim='plots')
+
+neg_comp_hgt750_200_toplot = xr.concat(neg_comp_hgt750_200, dim='plots')
+neg_comp_hgt750_200_sig_toplot = xr.concat(neg_comp_hgt750_200_sig, dim='plots')
+
+pos_comp_hgt750_toplot = xr.concat(pos_comp_hgt750+pos_comp_hgt750, dim='plots')
+neg_comp_hgt750_toplot = xr.concat(neg_comp_hgt750+neg_comp_hgt750, dim='plots')
+
+
+title_pos_cases = ['Pure positive IOD', 'Pure El Niño',  'El Niño - pos. IOD',
+                   'Pure positive IOD', 'Pure El Niño', 'El Niño - pos. IOD']
+
+
+title_neg_cases = ['Pure negative IOD', 'Pure La Niña',  'La Niña - neg. IOD',
+                   'Pure negative IOD', 'Pure La Niña', 'La Niña - neg. IOD']
+
+plt.rcParams['hatch.linewidth'] = 1
+PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
+                      levels_r1=scale_pp, cmap_r1=cbar_pp,
+                      levels_r2=scale_t, cmap_r2=cbar,
+                      data_ctn=pos_comp_hgt750_toplot,
+                      levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt_750, color_ctn='k',
+                      titles=title_pos_cases, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=pos_comp_pp_t_sig_toplot, hatches='...',
+                      data_ctn_no_ocean_mask=False)
+
+PlotFinalTwoVariables(data=neg_comp_pp_t_toplot, num_cols=3,
+                      levels_r1=scale_pp, cmap_r1=cbar_pp,
+                      levels_r2=scale_t, cmap_r2=cbar,
+                      data_ctn=neg_comp_hgt750_toplot,
+                      levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt_750, color_ctn='k',
+                      titles=title_neg_cases, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=neg_comp_pp_t_sig_toplot, hatches='...',
+                      data_ctn_no_ocean_mask=False)
+
+
+PlotFinalTwoVariables(data=pos_comp_hgt750_200_toplot, num_cols=3,
+                      levels_r1=scale_hgt_750, cmap_r1=cbar,
+                      levels_r2=scale_hgt, cmap_r2=cbar,
+                      data_ctn=pos_comp_hgt750_200_toplot,
+                      levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt, color_ctn='k',
+                      titles=title_pos_cases, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=pos_comp_hgt750_200_sig_toplot, hatches='...',
+                      data_ctn_no_ocean_mask=False)
+
+PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
+                      levels_r1=scale_hgt_750, cmap_r1=cbar,
+                      levels_r2=scale_hgt, cmap_r2=cbar,
+                      data_ctn=neg_comp_hgt750_200_toplot,
+                      levels_ctn_r1=scale_hgt_750,
+                      levels_ctn_r2=scale_hgt, color_ctn='k',
+                      titles=title_pos_cases, namefig='', save=save, dpi=dpi,
+                      out_dir=out_dir, pdf=True,
+                      high=2, width = 7.08661, step=1,
+                      ocean_mask=False, num_cases=False,
+                      num_cases_data=None,
+                      sig_points=neg_comp_hgt750_200_sig_toplot, hatches='...',
+                      data_ctn_no_ocean_mask=False)
 
 print('Done Obs. Composite -------------------------------------------------- ')
 print(' --------------------------------------------------------------------- ')
