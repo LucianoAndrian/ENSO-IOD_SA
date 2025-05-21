@@ -11,7 +11,7 @@ from Funciones import SelectVariables
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 # ---------------------------------------------------------------------------- #
-save_nc = False
+save_nc = True
 out_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
 
 cases_date_dir = '/pikachu/datos/luciano.andrian/cases_dates/'
@@ -148,7 +148,7 @@ else:
 #         process.start()
 
 # Tref #########################################################################
-cases = ['dmi_neg_n34_pos', 'dmi_pos_n34_neg']
+#cases = ['dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 if len(seasons)>1:
     def SelectEventsTref(c):
         for s in seasons:

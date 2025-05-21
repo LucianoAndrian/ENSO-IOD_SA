@@ -168,6 +168,7 @@ def SplitFilesByMonotonicity(files):
             if "monotonic global indexes along dimension S" in str(e):
                 return files[:i-1], files[i-1:]
     return files, []
+
 # ---------------------------------------------------------------------------- #
 for v in variables:
     print(f"{v} ------------------------------------------------------------ #")
@@ -264,13 +265,22 @@ for v in variables:
         print('Usando SplitFilesByMonotonicity...')
         files0, files1 = SplitFilesByMonotonicity(files)
 
-        data0 = xr.open_mfdataset(files0, decode_times=False)
-        data1 = xr.open_mfdataset(files1, decode_times=False)
+        if len(np.intersect1d(files0, files1)) == 0:
 
-        data0 = SetDataCFSv2(data0, sa)
-        data1 = SetDataCFSv2(data1, sa)
+            # Sin embargo, S parece estar duplicada
+            data0 = xr.open_mfdataset(files0, decode_times=False)
+            data1 = xr.open_mfdataset(files1, decode_times=False)
 
-        data = xr.concat([data0, data1], dim='time')
+            data0 = SetDataCFSv2(data0, sa)
+            data1 = SetDataCFSv2(data1, sa)
+
+            t_duplicados = np.intersect1d(data0.time.values, data1.time.values)
+            no_duplicados = ~np.isin(data0.time.values, t_duplicados)
+            data0 = data0.sel(time=no_duplicados)
+
+            data = xr.concat([data0, data1], dim='time')
+        else:
+            print('Archivos duplicados en la selecciones de RealTime')
 
     print('Open files done')
     # ------------------------------------------------------------------------ #

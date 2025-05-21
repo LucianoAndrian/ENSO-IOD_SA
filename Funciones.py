@@ -3432,6 +3432,9 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                 ax_new.add_feature(cartopy.feature.LAND, facecolor='white')
                 ax_new.coastlines(color='k', linestyle='-', alpha=1,
                                   resolution='110m', linewidth=0.2)
+                ax_new.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) ",
+                        transform=ax_new.transAxes, size=4)
+                i2 += 1
                 ax_new.set_title('Climatology', fontsize=4, pad=1)
                 gl = ax_new.gridlines(draw_labels=False, linewidth=0.3,
                                       linestyle='-', zorder=20)
@@ -3460,11 +3463,6 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                 aux_ctn = data_ctn.sel(plots=plot)
                 if ((aux_ctn.mean().values != 0) and
                         (~np.isnan(aux_ctn.mean().values))):
-
-                    ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
-                                           f"$N={titles[plot]}$",
-                            transform=ax.transAxes, size=4)
-                    i2 += 1
 
                     if ocean_mask is True and data_ctn_no_ocean_mask is False:
                         mask_ocean = MakeMask(aux_ctn)
@@ -3511,8 +3509,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                      transform=crs_latlon, colors='none',
                                      hatches=[hatches, hatches], extend='lower', zorder=5)
 
-                    for i2, collection in enumerate(cs.collections):
-                        collection.set_edgecolor(colors_l[i2 % len(colors_l)])
+                    for i3, collection in enumerate(cs.collections):
+                        collection.set_edgecolor(colors_l[i3 % len(colors_l)])
 
                     for collection in cs.collections:
                         collection.set_linewidth(0.)
@@ -3521,6 +3519,12 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
             # Contourf ------------------------------------------------------- #
             if ((aux.mean().values != 0) and
                     (~np.isnan(aux.mean().values))):
+
+                ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i2]}) "
+                                       f"$N={titles[plot]}$",
+                        transform=ax.transAxes, size=4)
+
+                i2 += 1
 
                 if ocean_mask is True:
                     mask_ocean = MakeMask(aux)
@@ -4147,7 +4151,7 @@ def PlotFinalTwoVariables(data, num_cols,
         # no plotear --------------------------------------------------------- #
         if no_plot is False:
             if num_cases:
-                ax.text(-0.005, 1.025, f"({string.ascii_lowercase[i]}), "
+                ax.text(-0.01, 1.055, f"({string.ascii_lowercase[i]}) "
                                        f"$N={num_cases_data[plot]}$",
                         transform=ax.transAxes, size=6)
             else:
