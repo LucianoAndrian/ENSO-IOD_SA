@@ -1122,8 +1122,13 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
 
         try:
-            aux_sig = xr.open_dataset(
-                f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
+            if v == 'hgt':
+                aux_sig = xr.open_dataset(
+                    f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc')
+            else:
+                aux_sig = xr.open_dataset(
+                    f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
+
             aux_sig['lat'] = aux_sig['lat'][::-1]
 
             # if len(aux_sig.sel(lat=slice(-60, 20)).lat.values) > 0:
