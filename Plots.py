@@ -1223,10 +1223,6 @@ box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
 box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40]]
 box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295]]
 
-box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia', 'Aux_20']
-box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40], [-25, -15]]
-box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295], [305, 320]]
-
 cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'n34_puros_pos', 'n34_puros_neg', #N34 puros
          'sim_pos', 'sim_neg', #sim misma fase
@@ -1234,7 +1230,7 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'dmi_pos', 'dmi_neg', 'n34_pos', 'n34_neg',
          'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 
-for v, v_cbar in zip(['tref', 'prec'], [cbar, cbar_pp_19]):
+for v, v_cbar in zip(['tref', 'prec'], [cbar_bins2d, cbar_pp_bins2d]):
 
     result = PDF_cases(variable=v, season='SON',
                        box_lons=box_lons, box_lats=box_lats, box_name=box_name,
@@ -1255,9 +1251,13 @@ for v, v_cbar in zip(['tref', 'prec'], [cbar, cbar_pp_19]):
     df = pd.DataFrame(regiones_areas)
     df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
     df.index = ['EN', 'IODp', 'EN-IODp', 'LN', 'IODn', 'LN-IODn']
-    PlotPDFTable(df.transpose(), cmap=v_cbar, vmin=-1, vmax=1, title='',
-                 save=save, name_fig=f'pdf_table_{v}', out_dir=out_dir, dpi=dpi,
-                 color_thr=0.5)
+    PlotPDFTable(np.round(df.transpose(), 2), cmap=v_cbar,
+                 levels=[-1, -0.8, -0.6, -0.4, -0.2, -0.1,
+                         0, 0.1, 0.2, 0.4, 0.6, 0.8, 1],
+                 title='',
+                 save=save, name_fig=f'pdf_table_{v}',
+                 out_dir=out_dir, dpi=dpi,
+                 color_thr=1)
 
     selected_cases = [['clim', 'n34_puros_pos', 'dmi_puros_pos', 'sim_pos'],
                       ['clim', 'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']]

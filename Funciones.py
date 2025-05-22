@@ -25,6 +25,9 @@ from scipy.signal import convolve2d
 import os
 import matplotlib.patches as mpatches
 from scipy.integrate import trapz
+from matplotlib.colors import BoundaryNorm
+
+
 
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import glob
@@ -4456,12 +4459,14 @@ def js_divergence(p: pd.Series, q: pd.Series) -> float:
     q_norm = q / trapz(q.values, q.index.values)
     return jensenshannon(p_norm, q_norm, base=2)**2
 
-def PlotPDFTable(df, cmap, vmin, vmax, title, name_fig='fig',
+def PlotPDFTable(df, cmap, levels, title, name_fig='fig',
                  save=False, out_dir='~/', dpi=100, color_thr=0.4):
 
     fig = plt.figure(dpi=dpi, figsize=(8, 4))
     ax = fig.add_subplot(111)
-    im = ax.imshow(df, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
+    norm = BoundaryNorm(levels, cmap.N, clip=True)
+
+    im = ax.imshow(df, cmap=cmap, norm=norm, aspect='auto')
 
     data_array = df.values
     for i in range(data_array.shape[0]):
@@ -4607,8 +4612,6 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
 
 ################################################################################
 # Bins 2D ######################################################################
-from matplotlib.colors import BoundaryNorm
-
 
 def PlotBins2D(cases_ordenados, num_ordenados, levels, cmap,
                color_thr, title, save=False, name_fig='fig', out_dir='~/',
