@@ -1,5 +1,5 @@
 """
-Testeo replica kayano con regresion falopa
+Testeo replica kayano con regresion fail
 """
 """
 Antes de usar eof, total es casi lo mismo.
@@ -8,11 +8,10 @@ Antes de usar eof, total es casi lo mismo.
 """
 import statsmodels.formula.api as smf
 import pandas as pd
-import matplotlib.pyplot as plt
 from eofs.xarray import Eof
-import numpy as np
 import xarray as xr
-from Funciones import DMI, Nino34CPC, ComputeWithEffect, ComputeWithoutEffect
+from Funciones import DMI, Nino34CPC
+import numpy as np
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import warnings
@@ -24,7 +23,7 @@ warnings.filterwarnings("ignore")
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-
+# ---------------------------------------------------------------------------- #
 def plotindex(index, indexwo, title='title', label='label'):
     plt.plot(index, color='k',
              label='original')
@@ -52,48 +51,6 @@ def LinearReg1_D(dmi, n34):
     dmi_pred_n34 = result.params[1] * n34.values + result.params[0]
 
     return n34 - n34_pred_dmi, dmi - dmi_pred_n34
-
-def RegWEffect(n34, dmi,data=None, data2=None, m=9,two_variables=False):
-    var_reg_n34_2=0
-    var_reg_dmi_2=1
-
-    data['time'] = n34
-     #print('Full Season')
-    # try:
-    #     aux = LinearReg(data.groupby('month')[m], 'time')
-    # except:
-    #     aux = LinearReg(data.groupby('time.month')[m], 'time')
-    aux = LinearReg(data, 'time')
-    var_reg_n34 = xr.polyval(data.groupby('month')[m].time, aux.var_polyfit_coefficients[0]) + \
-           aux.var_polyfit_coefficients[1]
-    #var_reg_n34 = aux.var_polyfit_coefficients[0]
-
-    data['time'] = dmi
-    # try:
-    #     aux = LinearReg(data.groupby('month')[m], 'time')
-    # except:
-    #     aux = LinearReg(data.groupby('time.month')[m], 'time')
-    aux = LinearReg(data, 'time')
-    var_reg_dmi = xr.polyval(data.groupby('month')[m].time, aux.var_polyfit_coefficients[0]) + \
-           aux.var_polyfit_coefficients[1]
-    # var_reg_dmi = aux.var_polyfit_coefficients[0]
-    # var_reg_dmi = aux.var_polyfit_coefficients[0]
-
-    if two_variables:
-        print('Two Variables')
-
-        data2['time'] = n34
-        #print('Full Season data2, m ignored')
-        #aux = LinearReg(data2.groupby('month')[m], 'time')
-        aux = LinearReg(data2, 'time')
-        var_reg_n34_2 = aux.var_polyfit_coefficients[0]
-
-        data2['time'] = dmi
-        #aux = LinearReg(data2.groupby('month')[m], 'time')
-        aux = LinearReg(data2, 'time')
-        var_reg_dmi_2 = aux.var_polyfit_coefficients[0]
-
-    return var_reg_n34, var_reg_dmi, var_reg_n34_2, var_reg_dmi_2
 
 def RegWOEffect(n34, n34_wo_dmi, dmi, dmi_wo_n34, m=9, datos=None):
 
@@ -168,45 +125,6 @@ def RegWOEffect(n34, n34_wo_dmi, dmi, dmi_wo_n34, m=9, datos=None):
            var_dmi_won34.var_polyfit_coefficients[0],\
            var_regn34_wodmi,var_regdmi_won34
 
-"""
-Regresion parcial observada
-"""
-
-
-# ---------------------------------------------------------------------------- #
-data_dir_t_pp = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
-                'data_obs_d_w_c/' #T y PP ya procesados
-data_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1950_2020/'
-
-# ---------------------------------------------------------------------------- #
-dmi_or = DMI(filter_bwa=False, start_per='1920', end_per='2020')[2]
-n34_or = Nino34CPC(xr.open_dataset(
-    "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc"),
-    start=1920, end=2020)[0]
-
-print('N34, DMI ------------------------------------------------------------ #')
-dmi = dmi_or.sel(time=slice('1951-01-01', '2016-12-01'))
-n34 = n34_or.sel(time=slice('1951-01-01', '2016-12-01'))
-
-# Regrsion solo en SON:
-n34_son = n34.sel(time=n34.time.dt.month.isin(10))
-dmi_son = dmi.sel(time=dmi.time.dt.month.isin(10))
-dmi_wo_n34_son, n34_wo_dmi_son = LinearReg1_D(
-    n34_son.__mul__(1 / n34_son.std('time')),
-    dmi_son.__mul__(1 / dmi_son.std('time')))
-
-# la perdida de magnitud es mas importante
-plotindex(n34_son, n34_wo_dmi_son, title='n34', label='residuo')
-plotindex(dmi_son, dmi_wo_n34_son, title='dmi', label='residuo')
-
-"""
-Pero no es posible detectar como Niño una Niña en eventos que no sean cercanos 
-a neutro
-
-Con el DMI puede pasar cuando la magnitud es menor, pero cno en los mas fuertes
-"""
-
-# Que pasa si en lugar de los indices se usa el metodo de eof que usaron en el paper?
 def xrFieldTimeDetrend(xrda, dim, deg=1):
     # detrend along a single dimension
     aux = xrda.polyfit(dim=dim, deg=deg)
@@ -218,20 +136,6 @@ def xrFieldTimeDetrend(xrda, dim, deg=1):
     dt = xrda - trend
     return dt
 
-sst = xr.open_dataset(
-    "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc")
-sst = sst.drop_dims('nbnds')
-sst = sst.sel(time=slice('1951-01-01', '2016-12-01')) # como en el paper
-sst = sst.rename({'sst':'var'})
-
-sst = xrFieldTimeDetrend(sst, 'time')
-sst = sst.rolling(time=3, center=True).mean()
-sst = sst.groupby('time.month') - sst.groupby('time.month').mean('time')
-sst = sst.sel(time=sst.time.dt.month.isin(10))
-sst = sst/sst.std('time')
-# aca faltaria el filtro morlet de 2-7 años... mucho lio para esto..
-
-import numpy as np
 
 def WaveFilter(serie, harmonic):
     N = np.size(serie)
@@ -271,178 +175,16 @@ def bandpass_filter(serie, max_period):
 
     return filtered
 
-filtered_sst = xr.apply_ufunc(
-    bandpass_filter,
-    sst['var'],
-    7,                       # max_period
-    input_core_dims=[['time'], [],],
-    output_core_dims=[['time']],
-    vectorize=True,
-    dask='parallelized',
-    output_dtypes=[sst['var'].dtype],
-    keep_attrs=True
-)
-
-filtered_sst = filtered_sst.transpose('time', 'lat', 'lon')
-
-# cuencas usadas en el paper
-sst_pac = filtered_sst.sel(lon=slice(110,290), lat=slice(30,-30))
-sst_ind = filtered_sst.sel(lon=slice(30,120), lat=slice(26,-26))
-
-# hipotesis, tomar eof por separado no separa nada.
-# Solo identifica la misma variabilidad en cada cuenca
-sst_pacind = filtered_sst.sel(lon=slice(30,290), lat=slice(25,-25))
-
-# EOF pacifico - ENSO
-solver_n34 = Eof(sst_pac)
-eof_n34 = solver_n34.eofsAsCovariance(neofs=3)
-pcs_n34 = solver_n34.pcs()
-var_per_n34 = np.around(solver_n34.varianceFraction(neigs=3).values * 100,1)
-
-pc_n34 = pcs_n34.sel(mode=0) # indice ~n34
-
-plt.imshow(-1*eof_n34[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.title(f'var exp {var_per_n34[0]}%')
-plt.colorbar()
-plt.show()
-
-values = -1*pc_n34/pc_n34.std()
-years = pc_n34.time.dt.year
-# Colores: azul si valor > 0, rojo si valor < 0
-colors = ['blue' if v > 0 else 'red' for v in values]
-plt.figure(figsize=(10, 4))
-plt.bar(x=years, height=values, color=colors)
-plt.grid(True)
-plt.ylim((-2, 3))
-plt.xlabel("Año")
-plt.show()
-
-plotindex(n34_son, -1*pc_n34/pc_n34.std(), title='N34 EOF', label='EOF')
-
-# EOF indico - IOD
-solver_dmi = Eof(sst_ind)
-eof_dmi = solver_dmi.eofsAsCovariance(neofs=3)
-pcs_dmi = solver_dmi.pcs()
-var_per_dmi = np.around(solver_dmi.varianceFraction(neigs=3).values * 100, 1)
-
-pc_dmi = pcs_dmi.sel(mode=0)# + pcs_dmi.sel(mode=1)
-
-plt.imshow(-1*eof_dmi[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.title(f'var exp {var_per_dmi[0]}%')
-plt.colorbar()
-plt.show()
-plotindex(dmi_son, -1*pc_dmi/pc_dmi.std(), title='DMI EOF', label='EOF')
-
-values = -1 * pc_dmi / pc_dmi.std()
-years = pc_dmi.time.dt.year
-# Colores: azul si valor > 0, rojo si valor < 0
-colors = ['blue' if v > 0 else 'red' for v in values]
-plt.figure(figsize=(10, 4))
-plt.bar(x=years, height=values, color=colors)
-plt.grid(True)
-plt.ylim((-2, 3))
-plt.xlabel("Año")
-plt.show()
-
-
-
-# EOF pacifico-indico
-solver_pacind = Eof(sst_pacind)
-eof_pacind = solver_pacind.eofsAsCovariance(neofs=3)
-pcs_pacind = solver_pacind.pcs()
-var_per = np.around(solver_pacind.varianceFraction(neigs=3).values * 100,1)
-
-pc_pacind = pcs_pacind.sel(mode=0)
-
-plt.imshow(-1*eof_pacind[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.colorbar()
-plt.title(f'var exp {var_per[0]}%')
-plt.show()
-#oh, wow, es lo mismo en cada cuenca...
-
-plotindex(n34_son, -1*pc_pacind/pc_pacind.std(), title='indpac EOF vs N34 ',
-          label='EOF')
-plotindex(dmi_son, -1*pc_pacind/pc_pacind.std(), title='indpac EOF vs DMI ',
-          label='EOF')
-
-
-corr_n34 = np.around(np.corrcoef(
-    n34.sel(time=n34.time.dt.month.isin(10)), -1*pc_n34)[0,1], 3)
-corr_dmi = np.around(np.corrcoef(
-    dmi.sel(time=dmi.time.dt.month.isin(10)), -1*pc_dmi)[0,1], 3)
-corr_pacind = np.around(np.corrcoef(
-    n34.sel(time=n34.time.dt.month.isin(10)), -1*pc_pacind)[0,1], 3)
-corr_pacind_dmi = np.around(np.corrcoef(
-    dmi.sel(time=dmi.time.dt.month.isin(10)), -1*pc_pacind)[0,1], 3)
-
-print(f'Correlacion pc_n34 - n34: {corr_n34}')
-print(f'Correlacion pc_dmi - dmi: {corr_dmi}')
-print(f'Correlacion pc_pacind - n34: {corr_pacind}')
-print(f'Correlacion pc_pacind - dmi: {corr_pacind_dmi}')
-
-
-# Que pasa si se hace regresion con las pcs?
-pc_dmi_wo_n34, pc_n34_wo_dmi = LinearReg1_D(
-    -1*pc_n34.__mul__(1 / pc_n34.std('time')),
-    -1*pc_dmi.__mul__(1 / pc_dmi.std('time')))
-
-plotindex(n34.sel(time=n34.time.dt.month.isin(10)), pc_n34_wo_dmi,
-          title='N34 EOF regre', label='EOF')
-plotindex(dmi.sel(time=dmi.time.dt.month.isin(10)), pc_dmi_wo_n34,
-          title='DMI EOF regre', label='EOF')
-
-"""
-Ahora hay diferencias notables entre los indices y las pcs
-"""
-
-# Tomando los 7 eventos mas intensos
-#EN puros mas intensos - pc_index
-top_en_pc_index = pc_n34_wo_dmi.sortby(
-    pc_n34_wo_dmi, ascending=False).isel(time=slice(10)).time.values
-#LN puros mas intensos - pc_index
-top_ln_pc_index = pc_n34_wo_dmi.sortby(
-    pc_n34_wo_dmi, ascending=True).isel(time=slice(10)).time.values
-
-#IODp puros mas intensos - pc_index
-top_iodp_pc_index = pc_dmi_wo_n34.sortby(
-    pc_dmi_wo_n34, ascending=False).isel(time=slice(10)).time.values
-#IODn puros mas intensos - pc_index
-top_iodn_pc_index = pc_dmi_wo_n34.sortby(
-    pc_dmi_wo_n34, ascending=True).isel(time=slice(10)).time.values
-
-
-"""
-Ahora a partir de los residuos de las pcs, buscar los residuos de las variables
-a usar, SST en este caso.
-"""
-
-filtered_sst = filtered_sst.to_dataset(name="var")
-aux_n34_wodmi, aux_dmi_won34, data_n34_wodmi, data_dmi_won34 = \
-    RegWOEffect(n34=pc_n34.__mul__(1 / pc_n34.std('time')),
-                n34_wo_dmi=pc_n34_wo_dmi,
-                dmi=pc_dmi.__mul__(1 / pc_dmi.std('time')),
-                dmi_wo_n34=pc_dmi_wo_n34,
-                m=10, datos=filtered_sst/filtered_sst.std('time'))
-
-# aux_n34, aux_dmi, aux_n34_2, aux_dmi_2 = \
-#     RegWEffect(data=filtered_sst/filtered_sst.std('time'),
-#                n34=pc_n34.__mul__(1 / pc_n34.std('time')),
-#                dmi=pc_dmi.__mul__(1 / pc_dmi.std('time')),
-#                m=10, two_variables=False)
-#
-# aux_dmi_won34 = aux_dmi - aux_n34
-# aux_n34_wodmi = aux_n34 - aux_dmi
-
-# Seleccionando de los residuos de SST en cada caso, los eventos mas fuertes
-data_n34_wodmi['time'] = pc_n34.time.values
-data_n34_wodmi = data_n34_wodmi/data_n34_wodmi.std('time')
-events_top_en_pc_index = data_n34_wodmi.sel(time=top_en_pc_index)
-events_top_ln_pc_index = data_n34_wodmi.sel(time=top_ln_pc_index)
-
-data_dmi_won34['time'] = pc_dmi.time.values
-data_dmi_won34 = data_dmi_won34/data_dmi_won34.std('time')
-events_top_iodp_pc_index = data_dmi_won34.sel(time=top_iodp_pc_index)
-events_top_iodn_pc_index = data_dmi_won34.sel(time=top_iodn_pc_index)
+def PlotBars(indice):
+    values = -1 * indice / indice.std()
+    years = indice.time.dt.year
+    colors = ['blue' if v > 0 else 'red' for v in values]
+    plt.figure(figsize=(10, 4))
+    plt.bar(x=years, height=values, color=colors)
+    plt.grid(True)
+    plt.ylim((-2, 3))
+    plt.xlabel("Año")
+    plt.show()
 
 def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
     """
@@ -451,7 +193,7 @@ def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
     Parámetros:
         ds (xarray.Dataset): Dataset con dimensiones (time, lat, lon) y variable 'var'
     """
-    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(15, 6),
+    fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(15, 6),
                              subplot_kw={'projection':  ccrs.PlateCarree(
                                  central_longitude=180)})
     axes = axes.flatten()
@@ -460,11 +202,18 @@ def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
 
         try:
             time = ds.time[i].values
-            sst = ds.sel(time=time)['var']
+            try:
+                sst = ds.sel(time=time)#['var']
+                cf = ax.contourf(ds.lon, ds.lat, sst,
+                                cmap='RdBu_r', levels=levels, extend='both',
+                                transform=ccrs.PlateCarree())
+            except:
+                sst = ds.sel(time=time)['var']
+                cf = ax.contourf(ds.lon, ds.lat, sst,
+                                 cmap='RdBu_r', levels=levels, extend='both',
+                                 transform=ccrs.PlateCarree())
 
-            cf = ax.contourf(ds.lon, ds.lat, sst,
-                             cmap='RdBu_r', levels=levels, extend='both',
-                             transform=ccrs.PlateCarree())
+
 
             ax.set_title(str(ds.time[i].dt.strftime('%Y-%m-%d').values))
             ax.coastlines()
@@ -484,17 +233,291 @@ def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
                         wspace=0.15, hspace=0.25)
     plt.show()
 
+def RegreField(field, index):
+    data = field.copy()
+
+    data['time'] = index
+    aux = LinearReg(data, 'time')
+    try:
+        aux = xr.polyval(data.time, aux.var_polyfit_coefficients[0]) + \
+              aux.var_polyfit_coefficients[1]
+    except:
+        aux = xr.polyval(data.time, aux.polyfit_coefficients[0]) + \
+              aux.polyfit_coefficients[1]
+    aux['time'] = field.time.values
+    return aux
+# ---------------------------------------------------------------------------- #
+dmi_or = DMI(filter_bwa=False, start_per='1920', end_per='2020')[2]
+n34_or = Nino34CPC(xr.open_dataset(
+    "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc"),
+    start=1920, end=2020)[0]
+
+print('N34, DMI ------------------------------------------------------------ #')
+dmi = dmi_or.sel(time=slice('1951-01-01', '2016-12-01'))
+n34 = n34_or.sel(time=slice('1951-01-01', '2016-12-01'))
+
+# Regrsion solo en SON:
+n34_son = n34.sel(time=n34.time.dt.month.isin(10))
+dmi_son = dmi.sel(time=dmi.time.dt.month.isin(10))
+dmi_wo_n34_son, n34_wo_dmi_son = LinearReg1_D(
+    n34_son.__mul__(1 / n34_son.std('time')),
+    dmi_son.__mul__(1 / dmi_son.std('time')))
+
+# la perdida de magnitud es mas importante
+plotindex(n34_son, n34_wo_dmi_son, title='n34', label='residuo')
+plotindex(dmi_son, dmi_wo_n34_son, title='dmi', label='residuo')
+
+sst = xr.open_dataset(
+    "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc")
+sst = sst.drop_dims('nbnds')
+sst = sst.sel(time=slice('1951-01-01', '2016-12-01')) # como en el paper
+sst = sst.rename({'sst':'var'})
+
+sst = xrFieldTimeDetrend(sst, 'time') # Detrend
+sst = sst.rolling(time=3, center=True).mean() #estacional
+sst = ((sst.groupby('time.month') - sst.groupby('time.month').mean('time'))
+       /sst.groupby('time.month').std('time')) # standarizacion
+sst = sst.sel(time=sst.time.dt.month.isin(10)) # SON
+sst = sst.sel(month=10)
+
+# TEstear esta posibilidad, no es el mismo enfoque que antes.
+data_dmi_won34 = sst - RegreField(sst, n34_son)
+data_dmi_won34 = data_dmi_won34 - RegreField(data_dmi_won34, dmi_wo_n34_son)
+data_n34_wodmi = sst - RegreField(sst, dmi_son)
+#Que pasa si se hace una seleccion de eventos a partir de la regresion anterior
+
+#EN puros mas intensos
+top_en = n34_wo_dmi_son.sortby(
+    n34_wo_dmi_son, ascending=False).isel(time=slice(7)).time.values
+#LN puros mas intensos
+top_ln = n34_wo_dmi_son.sortby(
+    n34_wo_dmi_son, ascending=True).isel(time=slice(7)).time.values
+
+#IODp puros mas intensos
+top_iodp = dmi_wo_n34_son.sortby(
+    dmi_wo_n34_son, ascending=False).isel(time=slice(7)).time.values
+#IODn puros mas intensos
+top_iodn = dmi_wo_n34_son.sortby(
+    dmi_wo_n34_son, ascending=True).isel(time=slice(7)).time.values
+
+# aux = sst.copy()
+# aux_n34_wodmi, aux_dmi_won34, data_n34_wodmi, data_dmi_won34 = \
+#     RegWOEffect(n34=n34_son.__mul__(1 / n34_son.std('time')),
+#                 n34_wo_dmi=n34_wo_dmi_son,
+#                 dmi=dmi_son.__mul__(1 / dmi_son.std('time')),
+#                 dmi_wo_n34=dmi_wo_n34_son,
+#                 m=10, datos=aux)
+
+# Seleccionando de los residuos de SST en cada caso, los eventos mas fuertes
+#data_n34_wodmi['time'] = n34_son.time.values
+events_top_en = data_n34_wodmi.sel(time=top_en)
+events_top_ln = data_n34_wodmi.sel(time=top_ln)
+
+#data_dmi_won34['time'] = dmi_son.time.values
+events_top_iodp = data_dmi_won34.sel(time=top_iodp)
+events_top_iodn = data_dmi_won34.sel(time=top_iodn)
+
+# Ploteo de todos los eventos seleccionados y el año
+plot_sst_times(events_top_en) # EN
+plot_sst_times(events_top_ln) # LN
+plot_sst_times(events_top_iodp) # IODp
+plot_sst_times(events_top_iodn) # IODn
+
+plt.imshow(events_top_en.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_ln.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_iodp.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_iodn.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+
+"""
+Usando regresion parcial directamente sobre los indices:
+No es muy posible detectar eventos opuestos a partir del residuo de los indices
+En el caso del DMI puede ser mas probable, no tanto para el ENSO, menos aún
+eventos fuertes.
+De todos modos, hay eventos que pueden quedar con magnitudes bastante diferentes
+"""
+
+# ---------------------------------------------------------------------------- #
+"""
+Que pasa si en su lugar, los indices se definen a partir de EOF y luego se hace 
+la regresion?
+"""
+# Esto puede dar lugar a diferencias: filtrado con harmonicos en lugar de Wavelet
+filtered_sst = xr.apply_ufunc(
+    bandpass_filter,
+    sst['var'],
+    6,                       # max_period
+    input_core_dims=[['time'], [],],
+    output_core_dims=[['time']],
+    vectorize=True,
+    dask=None,
+    output_dtypes=[sst['var'].dtype],
+    keep_attrs=True
+)
+
+filtered_sst = filtered_sst.transpose('time', 'lat', 'lon') # para Eof
+
+# cuencas usadas en el paper
+sst_pac = filtered_sst.sel(lon=slice(110,290), lat=slice(30,-30))
+sst_ind = filtered_sst.sel(lon=slice(30,120), lat=slice(26,-26))
+
+"""
+Hipotesis: los eofs de cada cuenca son el mismo eof de las dos cuencas
+"""
+sst_indpac = filtered_sst.sel(lon=slice(30,290), lat=slice(25,-25))
+
+# EOF ------------------------------------------------------------------------ #
+# EOF pacifico - ENSO
+solver_n34 = Eof(sst_pac)
+eof_n34 = solver_n34.eofsAsCovariance(neofs=3)
+pcs_n34 = solver_n34.pcs()
+var_per_n34 = np.around(solver_n34.varianceFraction(neigs=3).values * 100,1)
+
+pc_n34 = pcs_n34.sel(mode=0) # indice ~n34
+
+plt.imshow(-1*eof_n34[0], vmin=-1, vmax=1, cmap='RdBu_r')
+plt.title(f'var exp {var_per_n34[0]}%')
+plt.colorbar()
+plt.show()
+
+PlotBars(pc_n34)
+
+plotindex(n34_son, -1*pc_n34/pc_n34.std(), title='N34 EOF', label='EOF')
+
+# EOF indico - IOD
+solver_dmi = Eof(sst_ind)
+eof_dmi = solver_dmi.eofsAsCovariance(neofs=3)
+pcs_dmi = solver_dmi.pcs()
+var_per_dmi = np.around(solver_dmi.varianceFraction(neigs=3).values * 100, 1)
+
+pc_dmi = pcs_dmi.sel(mode=0)# + pcs_dmi.sel(mode=1)
+
+plt.imshow(-1*eof_dmi[0], vmin=-1, vmax=1, cmap='RdBu_r')
+plt.title(f'var exp {var_per_dmi[0]}%')
+plt.colorbar()
+plt.show()
+plotindex(dmi_son, -1*pc_dmi/pc_dmi.std(), title='DMI EOF', label='EOF')
+
+PlotBars(pc_dmi)
+
+
+
+# EOF pacifico-indico
+solver_indpac = Eof(sst_indpac)
+eof_indpac = solver_indpac.eofsAsCovariance(neofs=3)
+pcs_indpac = solver_indpac.pcs()
+var_per = np.around(solver_indpac.varianceFraction(neigs=3).values * 100,1)
+
+pc_indpac = pcs_indpac.sel(mode=0)
+
+plt.imshow(-1*eof_indpac[0], vmin=-1, vmax=1, cmap='RdBu_r')
+plt.colorbar()
+plt.title(f'var exp {var_per[0]}%')
+plt.show()
+
+plotindex(n34_son, -1*pc_indpac/pc_indpac.std(), title='indpac EOF vs N34 ',
+          label='EOF')
+plotindex(dmi_son, -1*pc_indpac/pc_indpac.std(), title='indpac EOF vs DMI ',
+          label='EOF')
+
+
+corr_n34 = np.around(np.corrcoef(
+    n34.sel(time=n34.time.dt.month.isin(10)), -1*pc_n34)[0,1], 3)
+corr_dmi = np.around(np.corrcoef(
+    dmi.sel(time=dmi.time.dt.month.isin(10)), -1*pc_dmi)[0,1], 3)
+corr_indpac = np.around(np.corrcoef(
+    n34.sel(time=n34.time.dt.month.isin(10)), -1*pc_indpac)[0,1], 3)
+corr_indpac_dmi = np.around(np.corrcoef(
+    dmi.sel(time=dmi.time.dt.month.isin(10)), -1*pc_indpac)[0,1], 3)
+
+
+corr_n34_dmi = np.around(np.corrcoef(
+    n34.sel(time=n34.time.dt.month.isin(10)),
+    dmi.sel(time=dmi.time.dt.month.isin(10)))[0,1], 3)
+
+corr_pc_n34_dmi = np.around(np.corrcoef(-1*pc_n34, -1*pc_dmi)[0,1], 3)
+
+print(f'Correlacion pc_n34 - n34: {corr_n34}')
+print(f'Correlacion pc_dmi - dmi: {corr_dmi}')
+print(f'Correlacion pc_indpac - n34: {corr_indpac}')
+print(f'Correlacion pc_indpac - dmi: {corr_indpac_dmi}')
+print(f'Correlacion n34 - dmi: {corr_n34_dmi}')
+print(f'Correlacion pc_n34 - pc_dmi: {corr_pc_n34_dmi}')
+
+
+# Que pasa si se hace regresion con las pcs?
+pc_dmi_wo_n34, pc_n34_wo_dmi = LinearReg1_D(
+    -1*pc_n34.__mul__(1 / pc_n34.std('time')),
+    -1*pc_dmi.__mul__(1 / pc_dmi.std('time')))
+
+plotindex(n34.sel(time=n34.time.dt.month.isin(10)), pc_n34_wo_dmi,
+          title='N34 EOF regre', label='EOF')
+plotindex(-1*pc_n34/pc_n34.std('time'), pc_n34_wo_dmi,
+          title='N34 EOF regre', label='EOF')
+
+plotindex(dmi.sel(time=dmi.time.dt.month.isin(10)), pc_dmi_wo_n34,
+          title='DMI EOF regre', label='EOF')
+plotindex(-1*pc_dmi/pc_dmi.std('time'), pc_dmi_wo_n34,
+          title='N34 EOF regre', label='EOF')
+
+"""
+Ahora hay diferencias notables entre los indices y las pcs
+"""
+
+# Tomando los 7 eventos mas intensos
+#EN puros mas intensos - pc_index
+top_en_pc_index = pc_n34_wo_dmi.sortby(
+    pc_n34_wo_dmi, ascending=False).isel(time=slice(7)).time.values
+#LN puros mas intensos - pc_index
+top_ln_pc_index = pc_n34_wo_dmi.sortby(
+    pc_n34_wo_dmi, ascending=True).isel(time=slice(7)).time.values
+
+#IODp puros mas intensos - pc_index
+top_iodp_pc_index = pc_dmi_wo_n34.sortby(
+    pc_dmi_wo_n34, ascending=False).isel(time=slice(7)).time.values
+#IODn puros mas intensos - pc_index
+top_iodn_pc_index = pc_dmi_wo_n34.sortby(
+    pc_dmi_wo_n34, ascending=True).isel(time=slice(7)).time.values
+
+
+"""
+Ahora a partir de los residuos de las pcs, buscar los residuos de las variables
+a usar, SST en este caso.
+"""
+
+data_dmi_won34 = filtered_sst.to_dataset(name="var") - RegreField(filtered_sst.to_dataset(name="var"), pc_n34)
+data_n34_wodmi = filtered_sst.to_dataset(name="var") - RegreField(filtered_sst.to_dataset(name="var"), pc_dmi)
+#
+# filtered_sst = filtered_sst.to_dataset(name="var")
+# aux_n34_wodmi, aux_dmi_won34, data_n34_wodmi, data_dmi_won34 = \
+#     RegWOEffect(n34=pc_n34.__mul__(1 / pc_n34.std('time')),
+#                 n34_wo_dmi=pc_n34_wo_dmi,
+#                 dmi=pc_dmi.__mul__(1 / pc_dmi.std('time')),
+#                 dmi_wo_n34=pc_dmi_wo_n34,
+#                 m=10, datos=filtered_sst)
+
+# aux_dmi_won34 = aux_dmi - aux_n34
+# aux_n34_wodmi = aux_n34 - aux_dmi
+
+# Seleccionando de los residuos de SST en cada caso, los eventos mas fuertes
+#data_n34_wodmi['time'] = pc_n34.time.values
+#data_n34_wodmi = data_n34_wodmi/data_n34_wodmi.std('time')
+events_top_en_pc_index = data_n34_wodmi.sel(time=top_en_pc_index)
+events_top_ln_pc_index = data_n34_wodmi.sel(time=top_ln_pc_index)
+
+#data_dmi_won34['time'] = pc_dmi.time.values
+#data_dmi_won34 = data_dmi_won34/data_dmi_won34.std('time')
+events_top_iodp_pc_index = data_dmi_won34.sel(time=top_iodp_pc_index)
+events_top_iodn_pc_index = data_dmi_won34.sel(time=top_iodn_pc_index)
+
 # Ploteo de todos los eventos seleccionados y el año
 plot_sst_times(events_top_en_pc_index) # EN
 plot_sst_times(events_top_ln_pc_index) # LN
 plot_sst_times(events_top_iodp_pc_index) # IODp
 plot_sst_times(events_top_iodn_pc_index) # IODn
 
-
-
-plt.imshow(events_top_en_pc_index.mean('time')['var'],vmin=-2, vmax=2, cmap='RdBu_r');plt.show()
-plt.imshow(events_top_ln_pc_index.mean('time')['var'],vmin=-2, vmax=2, cmap='RdBu_r');plt.show()
-plt.imshow(events_top_iodp_pc_index.mean('time')['var'],vmin=-2, vmax=2, cmap='RdBu_r');plt.show()
-plt.imshow(events_top_iodn_pc_index.mean('time')['var'],vmin=-2, vmax=2, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_en_pc_index.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_ln_pc_index.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_iodp_pc_index.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+plt.imshow(events_top_iodn_pc_index.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
 
 
