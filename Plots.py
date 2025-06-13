@@ -26,7 +26,8 @@ warnings.filterwarnings("ignore")
 from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
     BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
     SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, \
-    SetBinsByCases, AreaBetween, PlotPDFTable, PlotFinalTwoVariables
+    SetBinsByCases, AreaBetween, PlotPDFTable, PlotFinalTwoVariables, \
+    PlotBins2DTwoVariables
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -1383,20 +1384,26 @@ if plot_bins_2d:
 
     print(
         'Plot ----------------------------------------------------------------- ')
-    box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-    box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40, -30],
-                [-53, -37]]
-    box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
-                [287, 294]]
+    # box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
+    # box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40, -30],
+    #             [-53, -37]]
+    # box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
+    #             [287, 294]]
+
+    title = ['Am', 'N-SESA', 'Patagonia', '', '', '']
+    box_name = ['Am', 'N-SESA', 'Patagonia']
+    box_lats = [[-13, 2], [-29, -17], [-53, -37]]
+    box_lons = [[291, 304], [303, 315], [287, 294]]
 
     t_scale = [-0.75, -0.625, -0.5, -0.375, -0.25, -0.1, 0,
                0.1, 0.25, 0.375, 0.5, 0.625, 0.75 ]
-    pp_cale = [-15.0, -12.5, -10.0, -7.5, -5.0, -1, 0.0,
+    pp_scale = [-15.0, -12.5, -10.0, -7.5, -5.0, -1, 0.0,
                1, 5.0, 7.5, 10.0, 12.5, 15.0]
 
-    for v, v_scale, v_cbar in zip(['prec', 'tref'],
-                                  [pp_cale, t_scale],
-                                  [cbar_pp_bins2d, cbar_bins2d]):
+    cases_ordenados_f = []
+    num_ordenados_f = []
+    for v, v_scale, v_cbar in zip(['tref', 'prec'], [t_scale, pp_scale],
+                                  [cbar_bins2d, cbar_pp_bins2d]):
 
         if v == 'prec':
             fix = 30
@@ -1457,13 +1464,32 @@ if plot_bins_2d:
             num_ordenados = np.array(aux_num). \
                 reshape(len(bin_limits), len(bin_limits))
 
-            PlotBins2D(cases_ordenados, num_ordenados,
-                       levels=v_scale, cmap=v_cbar,
-                       color_thr=color_thr,
-                       title=f'{v} {units} - {bn}',
-                       save=save, name_fig=f'{v}_bins2d_{bn}',
-                       out_dir=out_dir, dpi=dpi,
-                       bin_limits=bin_limits)
+            cases_ordenados_f.append(cases_ordenados)
+            num_ordenados_f.append(num_ordenados)
+
+
+    cases_ordenados_f[-1] = None
+    PlotBins2DTwoVariables(data_bins=cases_ordenados_f,
+                           num_bins=num_ordenados_f,
+                           bin_limits=bin_limits, num_cols=3,
+                           variable_v1='Temp.', variable_v2='Precip.',
+                           levels_v1=t_scale, cmap_v1=cbar_bins2d,
+                           levels_v2=pp_scale, cmap_v2=cbar_pp_bins2d,
+                           color_thr_v1=1, color_thr_v2=7,
+                           title=title,
+                           save=save, name_fig='figure11',
+                           out_dir=out_dir, dpi=dpi, high=3.5, width=11,
+                           pdf=True)
+
+    # PlotBins2D(cases_ordenados, num_ordenados,
+    #            levels=v_scale, cmap=v_cbar,
+    #            color_thr=color_thr,
+    #            title=f'{v} {units} - {bn}',
+    #            save=save, name_fig=f'{v}_bins2d_{bn}',
+    #            out_dir=out_dir, dpi=dpi,
+    #            bin_limits=bin_limits)
+
+
 else:
     print('Bins 2D no plot')
 

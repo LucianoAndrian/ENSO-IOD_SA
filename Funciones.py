@@ -4816,6 +4816,127 @@ def SameDateAs(data, datadate):
     :return:
     """
     return data.sel(time=datadate.time.values)
+
+
+
+def PlotBins2DTwoVariables(data_bins, num_bins, bin_limits, num_cols,
+                           variable_v1, variable_v2, levels_v1, cmap_v1,
+                           levels_v2, cmap_v2, color_thr_v1, color_thr_v2,
+                           title, save, name_fig, out_dir, dpi,
+                           high=3.5, width=11, pdf=True):
+
+    num_plots = len(data_bins)
+    num_rows = np.ceil(num_plots / num_cols).astype(int)
+    change_row = len(data_bins)/2
+
+    fig, axes = plt.subplots(
+        num_rows, num_cols, figsize=(width, high * num_rows),
+        gridspec_kw={'wspace': 0.1, 'hspace': 0.2})
+
+    for ax, plot in zip(axes.flatten(), range(0, num_plots)):
+
+        if plot < change_row:
+            levels = levels_v1
+            cmap = cmap_v1
+            color_thr = color_thr_v1
+            row1=True
+            ylabel = variable_v1
+        else:
+            levels = levels_v2
+            cmap = cmap_v2
+            color_thr = color_thr_v2
+            row1 = False
+            ylabel = variable_v2
+
+        data_sel = data_bins[plot]
+        if data_sel is None:
+            to_plot = False
+        else:
+            to_plot = True
+
+        num_bins_sel = num_bins[plot]
+        cmap = plt.get_cmap(cmap)
+
+        norm = BoundaryNorm(levels, cmap.N, clip=True)
+
+        if to_plot is True:
+            if row1 is True:
+                im_r1 = ax.imshow(data_sel, cmap=cmap, norm=norm)
+            else:
+                im_r2 = ax.imshow(data_sel, cmap=cmap, norm=norm)
+
+            for i in range(0, len(bin_limits)):
+                for j in range(0, len(bin_limits)):
+                    if np.abs(data_sel[i, j]) > color_thr:
+                        color_num = 'white'
+                    else:
+                        color_num = 'k'
+                    if (~np.isnan(num_bins_sel[i, j])) and (
+                            num_bins_sel[i, j] != 0):
+                        ax.text(j, i, num_bins_sel[i, j].astype(np.int64),
+                                ha='center', va='center', color=color_num,
+                                size=9)
+
+            ax.set_title(title[plot])
+            ax.text(-0.01, 1.025, f"({string.ascii_lowercase[plot]})",
+                    transform=ax.transAxes, size=9)
+
+            xylimits = [-.5, -.5 + len(bin_limits)]
+            ax.set_xlim(xylimits[::-1])
+            ax.set_ylim(xylimits)
+
+            original_ticks = np.arange(-.5, -.5 + len(bin_limits) + 0.5)
+            new_tickx = np.unique(bin_limits)
+            ax.set_xticks(original_ticks, new_tickx)
+            ax.set_yticks(original_ticks, new_tickx)
+            ax.tick_params(axis='x', labelsize=7)
+            ax.tick_params(axis='y', labelsize=8)
+
+            inf_neutro_border = original_ticks[
+                                    int(np.floor(len(original_ticks) / 2))] - 1
+            upp_neutro_border = original_ticks[
+                int(np.ceil(len(original_ticks) / 2))]
+            ax.axhline(y=inf_neutro_border, color='k', linestyle='-',
+                       linewidth=2)
+            ax.axhline(y=upp_neutro_border, color='k', linestyle='-',
+                       linewidth=2)
+            ax.axvline(x=inf_neutro_border, color='k', linestyle='-',
+                       linewidth=2)
+            ax.axvline(x=upp_neutro_border, color='k', linestyle='-',
+                       linewidth=2)
+
+            ax.margins(0)
+            ax.grid(which='major', alpha=0.5, color='k')
+            if plot == 0 or plot == change_row:
+                ax.set_ylabel(ylabel)
+                first = False
+        else:
+            ax.axis('off')
+
+
+    pos1 = fig.add_axes([0.93, 0.57, 0.015, 0.35])
+    cb1 = fig.colorbar(im_r1, cax=pos1, orientation='vertical')
+    cb1.ax.tick_params(labelsize=8, pad=1)
+
+    pos2 = fig.add_axes([0.93, 0.1, 0.015, 0.35])
+    cb2 = fig.colorbar(im_r2, cax=pos2, orientation='vertical')
+    cb2.ax.tick_params(labelsize=8, pad=1)
+
+    fig.subplots_adjust(bottom=0.1, wspace=0.05, hspace=0.55, left=0.075,
+                        right=0.90, top=0.95)
+
+    fig.supylabel('Niño3.4 - SST index (of std)', fontsize=11)
+    fig.supxlabel('DMI - SST index (of std)', fontsize=11)
+
+    if save:
+        if pdf is True:
+            plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
+            plt.close()
+        else:
+            plt.savefig(f"{out_dir}{name_fig}.png", dpi=dpi, bbox_inches='tight')
+            plt.close()
+    else:
+        plt.show()
 ################################################################################
 ################################################################################
 
