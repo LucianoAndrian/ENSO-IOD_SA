@@ -1,8 +1,6 @@
 """
-Testeo replica kayano con regresion fail
-"""
-from numpy.distutils.tests.test_npy_pkg_config import simple
-
+Testeo replica regresion eof, fail
+'"""
 """
 Antes de usar eof, total es casi lo mismo.
 ¿los composites sinteticos luego de la regresion pueden contener años que en
@@ -24,6 +22,7 @@ warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from matplotlib import colors
 
 # ---------------------------------------------------------------------------- #
 def plotindex(index, indexwo, title='title', label='label'):
@@ -264,6 +263,43 @@ def select_to_events(field, index_pos, index_neg):
 
 
 
+def PlotSSTOne(field, levels = np.arange(-1,1.1,0.1), dpi=100):
+
+    fig = plt.figure(figsize=(8, 4), dpi=dpi)
+    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
+    crs_latlon = ccrs.PlateCarree()
+    ax.set_extent([0, 359, -50, 50], crs=crs_latlon)
+
+    cbar = [
+        # deep → pale blue              |  WHITE  |  pale → deep red
+        '#014A9B', '#155AA8', '#276BB4', '#397AC1', '#4E8CCE',
+        '#649FDA', '#7BB2E7', '#97C7F3', '#B7DDFF',
+        '#FFFFFF',  # −0.1 ↔ 0.0
+        '#FFFFFF',  # 0.0 ↔ 0.1
+        '#FFD1CF', '#F7A8A5', '#EF827E', '#E5655D',
+        '#D85447', '#CB4635', '#BE3D23', '#AE2E11', '#9B1C00'
+    ]
+    cbar = colors.ListedColormap(cbar, name="blue_white_red_20")
+    cbar.set_over('#641B00')
+    cbar.set_under('#012A52')
+    cbar.set_bad(color='white')
+
+    try:
+        field_to_plot = field['var']
+    except:
+        field_to_plot = field
+
+    im = ax.contourf(field.lon, field.lat, field_to_plot,
+                 levels=levels, transform=crs_latlon, cmap=cbar,
+                     extend='both')
+
+    cb = plt.colorbar(im, fraction=0.042, pad=0.035, shrink=0.8)
+    cb.ax.tick_params(labelsize=8)
+    ax.coastlines()
+    ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+
+    plt.show()
+
 # ---------------------------------------------------------------------------- #
 dmi_or = DMI(filter_bwa=False, start_per='1920', end_per='2020')[2]
 n34_or = Nino34CPC(xr.open_dataset(
@@ -299,8 +335,8 @@ plotindex(n34_son, n34_wo_dmi_son, title='n34', label='residuo')
 plotindex(dmi_son, dmi_wo_n34_son, title='dmi', label='residuo')
 
 # eventos mas intensos
-top_en, top_ln = find_top_events(n34_wo_dmi_son, 10)
-top_iodp, top_iodn = find_top_events(dmi_wo_n34_son, 10)
+top_en, top_ln = find_top_events(n34_wo_dmi_son, 7)
+top_iodp, top_iodn = find_top_events(dmi_wo_n34_son, 7)
 # no hay gran coincidencia con lo obtenido en el paper a partir de las pcs
 
 # Como se ven los campos reales de estos eventos?
@@ -316,11 +352,11 @@ plot_sst_times(top_iodn_events)
 # sin embargo ninguno garantiza ser puro.
 
 #  La descripcion de los residuos de las variables es muy vaga en el paper.
-#  En los EOFs (mas adelante) la selección de años es bastante similar a la que
-#  obtienen en el paper. Por lo que supongo el residuo se obtiene igual que en
-#  linear LinearReg1_D
+#  En los EOFs la selección de años es bastante similar a la que
+#  obtienen en el paper.
 
 # Campo que solo tenga N34, restandole la regresion del dmi sin n34.
+# Esto no da resutlados con el EOF. Y lo del EOF no da resutlado aca
 sst_wo_dmi = sst - RegreField(sst, dmi_wo_n34_son)
 sst_wo_n34 = sst - RegreField(sst, n34_wo_dmi_son)
 
@@ -335,11 +371,10 @@ plot_sst_times(top_ln_reg_events)
 plot_sst_times(top_iodn_reg_events)
 
 # las composiciones dan muy mal. solo bien en el iodp
-plt.imshow(top_en_reg_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_iodp_reg_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_ln_reg_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_iodn_reg_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-
+PlotSSTOne(top_en_reg_events.mean('time'))
+PlotSSTOne(top_iodp_reg_events.mean('time'))
+PlotSSTOne(top_ln_reg_events.mean('time'))
+PlotSSTOne(top_iodn_reg_events.mean('time'))
 
 # EOF ------------------------------------------------------------------------ #
 """
@@ -448,8 +483,8 @@ top_en_pc, top_ln_pc = find_top_events(pc_n34_wo_dmi, 7)
 top_iodp_pc, top_iodn_pc = find_top_events(pc_dmi_wo_n34, 7)
 # Gran coincidencia de años seleccionados aca con los del paper
 
-sst_wo_dmi_pc = sst - RegreField(sst, pc_dmi_wo_n34)
-sst_wo_n34_pc = sst - RegreField(sst, pc_n34_wo_dmi)
+sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi)
+sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34)
 
 top_en_pc_events, top_ln_pc_events = \
     select_to_events(sst_wo_dmi_pc, top_en_pc, top_ln_pc)
@@ -462,8 +497,9 @@ plot_sst_times(top_ln_pc_events)
 plot_sst_times(top_iodn_pc_events)
 # Al igual que antes los eventos no son puros
 
-# La composiciones dan bastante bien para EN, muy mal para LN y IODn y raro en iodp
-plt.imshow(top_en_pc_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_iodp_pc_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_ln_pc_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
-plt.imshow(top_iodn_pc_events.mean('time')['var'],vmin=-1, vmax=1, cmap='RdBu_r');plt.show()
+# Las composiciones dan bastante bien
+PlotSSTOne(top_en_pc_events.mean('time'))
+PlotSSTOne(top_iodp_pc_events.mean('time'))
+PlotSSTOne(top_ln_pc_events.mean('time'))
+PlotSSTOne(top_iodn_pc_events.mean('time'))
+# ---------------------------------------------------------------------------- #
