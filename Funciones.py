@@ -26,8 +26,7 @@ import os
 import matplotlib.patches as mpatches
 from scipy.integrate import trapz
 from matplotlib.colors import BoundaryNorm
-
-
+from scipy.stats import spearmanr
 
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import glob
@@ -4937,6 +4936,30 @@ def PlotBins2DTwoVariables(data_bins, num_bins, bin_limits, num_cols,
             plt.close()
     else:
         plt.show()
+
+# ---------------------------------------------------------------------------- #
+def spearman_correlation(da_field, da_series):
+
+    def spearman_func(x, y):
+        # Si hay valores NaN, se ignoran ambos pares
+        mask = np.isfinite(x) & np.isfinite(y)
+        if np.sum(mask) < 3: # se necesitan al menos 3 pares para  Spearman
+            return np.nan
+        return spearmanr(x[mask], y[mask])[0]
+
+    result = xr.apply_ufunc(
+        spearman_func,
+        da_field,
+        da_series,
+        input_core_dims=[["sample"], ["sample"]],
+        output_core_dims=[[]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+    )
+
+    return result
+
 ################################################################################
 ################################################################################
 
