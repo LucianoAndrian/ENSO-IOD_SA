@@ -4,7 +4,7 @@ Mapa de regiones
 """
 ################################################################################
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
-save = False
+save = True
 ################################################################################
 import numpy as np
 import matplotlib.pyplot as plt
