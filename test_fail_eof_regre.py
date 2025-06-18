@@ -256,8 +256,12 @@ def find_top_events(index, num_of_events):
     return pos, neg
 
 def select_to_events(field, index_pos, index_neg):
-    top_pos_events = field.sel(time=index_pos.time)
-    top_neg_events = field.sel(time=index_neg.time)
+    try:
+        top_pos_events = field.sel(time=index_pos.time)
+        top_neg_events = field.sel(time=index_neg.time)
+    except:
+        top_pos_events = field.sel(time=field.time.dt.year.isin(index_pos))
+        top_neg_events = field.sel(time=field.time.dt.year.isin(index_neg))
 
     return top_pos_events, top_neg_events
 
@@ -343,10 +347,10 @@ top_iodp, top_iodn = find_top_events(dmi_wo_n34_son, 7)
 top_en_events, top_ln_events = select_to_events(sst, top_en, top_ln)
 top_iodp_events, top_iodn_events = select_to_events(sst, top_iodp, top_iodn)
 
-plot_sst_times(top_en_events)
-plot_sst_times(top_iodp_events)
-plot_sst_times(top_ln_events)
-plot_sst_times(top_iodn_events)
+# plot_sst_times(top_en_events)
+# plot_sst_times(top_iodp_events)
+# plot_sst_times(top_ln_events)
+# plot_sst_times(top_iodn_events)
 # no hay selección de eventos que en la realidad sean de signo opuesto,
 # aunque algunos pueden estar cerca de ser neutros.
 # sin embargo ninguno garantiza ser puro.
@@ -356,7 +360,6 @@ plot_sst_times(top_iodn_events)
 #  obtienen en el paper.
 
 # Campo que solo tenga N34, restandole la regresion del dmi sin n34.
-# Esto no da resutlados con el EOF. Y lo del EOF no da resutlado aca
 sst_wo_dmi = sst - RegreField(sst, dmi_wo_n34_son)
 sst_wo_n34 = sst - RegreField(sst, n34_wo_dmi_son)
 
@@ -365,12 +368,12 @@ top_en_reg_events, top_ln_reg_events = \
 top_iodp_reg_events, top_iodn_reg_events = \
     select_to_events(sst_wo_n34, top_iodp, top_iodn)
 
-plot_sst_times(top_en_reg_events)
-plot_sst_times(top_iodp_reg_events)
-plot_sst_times(top_ln_reg_events)
-plot_sst_times(top_iodn_reg_events)
+# plot_sst_times(top_en_reg_events)
+# plot_sst_times(top_iodp_reg_events)
+# plot_sst_times(top_ln_reg_events)
+# plot_sst_times(top_iodn_reg_events)
 
-# las composiciones dan muy mal. solo bien en el iodp
+# las composiciones dan muy mal. solo bien los positivos
 PlotSSTOne(top_en_reg_events.mean('time'))
 PlotSSTOne(top_iodp_reg_events.mean('time'))
 PlotSSTOne(top_ln_reg_events.mean('time'))
@@ -385,7 +388,7 @@ la regresion?
 filtered_sst = xr.apply_ufunc(
     bandpass_filter,
     sst['var'],
-    6.5,                       # max_period
+    7,                       # max_period
     input_core_dims=[['time'], [],],
     output_core_dims=[['time']],
     vectorize=True,
@@ -406,9 +409,12 @@ Hipotesis: los eofs de cada cuenca son el mismo eof de las dos cuencas
 sst_indpac = filtered_sst.sel(lon=slice(30,290), lat=slice(25,-25))
 
 # EOF pacifico - ENSO ---------------- #
+
+pcscal = 1
+
 solver_n34 = Eof(sst_pac)
 eof_n34 = solver_n34.eofsAsCovariance(neofs=3)
-pcs_n34 = solver_n34.pcs()
+pcs_n34 = solver_n34.pcs(pcscaling=pcscal)
 var_per_n34 = np.around(solver_n34.varianceFraction(neigs=3).values * 100,1)
 
 pc_n34 = pcs_n34.sel(mode=0) # indice ~n34
@@ -420,12 +426,12 @@ plt.show()
 
 PlotBars(pc_n34)
 
-plotindex(n34_son, -1*pc_n34/pc_n34.std(), title='N34 EOF', label='EOF')
+plotindex(n34_son, -1*pc_n34, title='N34 EOF', label='EOF')
 
 # EOF indico - IOD ---------------- #
 solver_dmi = Eof(sst_ind)
 eof_dmi = solver_dmi.eofsAsCovariance(neofs=3)
-pcs_dmi = solver_dmi.pcs()
+pcs_dmi = solver_dmi.pcs(pcscaling=pcscal)
 var_per_dmi = np.around(solver_dmi.varianceFraction(neigs=3).values * 100, 1)
 
 pc_dmi = pcs_dmi.sel(mode=0)# + pcs_dmi.sel(mode=1)
@@ -434,14 +440,14 @@ plt.imshow(-1*eof_dmi[0], vmin=-1, vmax=1, cmap='RdBu_r')
 plt.title(f'var exp {var_per_dmi[0]}%')
 plt.colorbar()
 plt.show()
-plotindex(dmi_son, -1*pc_dmi/pc_dmi.std(), title='DMI EOF', label='EOF')
+plotindex(dmi_son, -1*pc_dmi, title='DMI EOF', label='EOF')
 
 PlotBars(pc_dmi)
 
 # EOF pacifico-indico ---------------- #
 solver_indpac = Eof(sst_indpac)
 eof_indpac = solver_indpac.eofsAsCovariance(neofs=3)
-pcs_indpac = solver_indpac.pcs()
+pcs_indpac = solver_indpac.pcs(pcscaling=pcscal)
 var_per = np.around(solver_indpac.varianceFraction(neigs=3).values * 100,1)
 
 pc_indpac = pcs_indpac.sel(mode=0)
@@ -451,9 +457,9 @@ plt.colorbar()
 plt.title(f'var exp {var_per[0]}%')
 plt.show()
 
-plotindex(n34_son, -1*pc_indpac/pc_indpac.std(), title='indpac EOF vs N34 ',
+plotindex(n34_son, -1*pc_indpac, title='indpac EOF vs N34 ',
           label='EOF')
-plotindex(dmi_son, -1*pc_indpac/pc_indpac.std(), title='indpac EOF vs DMI ',
+plotindex(dmi_son, -1*pc_indpac, title='indpac EOF vs DMI ',
           label='EOF')
 
 # Como son estos indices frente a los otros? --------------------------------- #
@@ -475,31 +481,29 @@ print(f'Correlacion pc_n34 - pc_dmi: {corr_pc_n34_dmi}')
 
 # ---------------------------------------------------------------------------- #
 # Que pasa si se hace regresion con las pcs?
-pc_dmi_wo_n34, pc_n34_wo_dmi = LinearReg1_D(
-    -1*pc_n34.__mul__(1 / pc_n34.std('time')),
-    -1*pc_dmi.__mul__(1 / pc_dmi.std('time')))
+pc_dmi_wo_n34, pc_n34_wo_dmi = LinearReg1_D(-1*pc_n34, -1*pc_dmi)
 
 top_en_pc, top_ln_pc = find_top_events(pc_n34_wo_dmi, 7)
 top_iodp_pc, top_iodn_pc = find_top_events(pc_dmi_wo_n34, 7)
 # Gran coincidencia de años seleccionados aca con los del paper
 
-sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi)
-sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34)
+sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi_wo_n34)
+sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34_wo_dmi)
 
 top_en_pc_events, top_ln_pc_events = \
     select_to_events(sst_wo_dmi_pc, top_en_pc, top_ln_pc)
 top_iodp_pc_events, top_iodn_pc_events = \
     select_to_events(sst_wo_n34_pc, top_iodp_pc, top_iodn_pc)
 
-plot_sst_times(top_en_pc_events)
-plot_sst_times(top_iodp_pc_events)
-plot_sst_times(top_ln_pc_events)
-plot_sst_times(top_iodn_pc_events)
+#plot_sst_times(top_en_pc_events)
+# plot_sst_times(top_iodp_pc_events)
+# plot_sst_times(top_ln_pc_events)
+# plot_sst_times(top_iodn_pc_events)
 # Al igual que antes los eventos no son puros
 
 # Las composiciones dan bastante bien
-PlotSSTOne(top_en_pc_events.mean('time'))
-PlotSSTOne(top_iodp_pc_events.mean('time'))
-PlotSSTOne(top_ln_pc_events.mean('time'))
-PlotSSTOne(top_iodn_pc_events.mean('time'))
+PlotSSTOne(top_en_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotSSTOne(top_iodp_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotSSTOne(top_ln_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotSSTOne(top_iodn_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 # ---------------------------------------------------------------------------- #
