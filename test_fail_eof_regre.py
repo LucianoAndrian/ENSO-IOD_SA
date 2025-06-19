@@ -137,7 +137,6 @@ def xrFieldTimeDetrend(xrda, dim, deg=1):
     dt = xrda - trend
     return dt
 
-
 def WaveFilter(serie, harmonic):
     N = np.size(serie)
 
@@ -151,7 +150,6 @@ def WaveFilter(serie, harmonic):
          B * np.cos(2 * np.pi * harmonic * np.arange(N) / N)
 
     return serie - xs
-
 
 def bandpass_filter(serie, max_period):
     min_period = 2
@@ -187,14 +185,24 @@ def PlotBars(indice):
     plt.xlabel("Año")
     plt.show()
 
-def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
+def plot_times(ds, levels=np.arange(-1,1.2,0.2), sa=False):
     """
     Plotea los 10 tiempos de la variable 'var' en el Dataset dado, usando contourf.
 
     Parámetros:
         ds (xarray.Dataset): Dataset con dimensiones (time, lat, lon) y variable 'var'
     """
-    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(15, 6),
+
+    if sa is True:
+        fig_size = (5, 6)
+        cbar = 'BrBG'
+    else:
+        fig_size = (15, 6)
+        cbar = 'RdBu_r'
+
+    nrow = 2
+    ncol = 4
+    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, figsize=fig_size,
                              subplot_kw={'projection':  ccrs.PlateCarree(
                                  central_longitude=180)})
     axes = axes.flatten()
@@ -206,15 +214,13 @@ def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
             try:
                 sst = ds.sel(time=time)#['var']
                 cf = ax.contourf(ds.lon, ds.lat, sst,
-                                cmap='RdBu_r', levels=levels, extend='both',
+                                cmap=cbar, levels=levels, extend='both',
                                 transform=ccrs.PlateCarree())
             except:
                 sst = ds.sel(time=time)['var']
                 cf = ax.contourf(ds.lon, ds.lat, sst,
-                                 cmap='RdBu_r', levels=levels, extend='both',
+                                 cmap=cbar, levels=levels, extend='both',
                                  transform=ccrs.PlateCarree())
-
-
 
             ax.set_title(str(ds.time[i].dt.strftime('%Y-%m-%d').values))
             ax.coastlines()
@@ -228,26 +234,40 @@ def plot_sst_times(ds, levels=np.arange(-1,1.2,0.2)):
                         fraction=0.05,
                         pad=0.05)
 
-    cbar.set_label('SST anomaly (°C)')
+    #cbar.set_label('SST anomaly (°C)')
 
     fig.subplots_adjust(left=0.05, right=0.98, bottom=0.25, top=0.93,
                         wspace=0.15, hspace=0.25)
     plt.show()
 
-def RegreField(field, index):
-    data = field.copy()
+def RegreField(field, index, return_coef=False):
+    """
+    Devuelve la parte del campo `field` explicada linealmente por `index`.
+    """
+    if isinstance(field, xr.Dataset):
+        da = field['var']
+    else:
+        da = field
 
-    data['time'] = index
-    aux = LinearReg(data, 'time')
-    try:
-        aux = xr.polyval(data.time, aux.var_polyfit_coefficients[0]) + \
-              aux.var_polyfit_coefficients[1]
-    except:
-        aux = xr.polyval(data.time, aux.polyfit_coefficients[0]) + \
-              aux.polyfit_coefficients[1]
-    aux['time'] = field.time.values
-    return aux
+    # 2 usar el indice en "time" para usar esa dimencion para la regresion
+    da_idx = da.copy()
+    da_idx = da_idx.assign_coords(time=index)
 
+    # 3 Regresión
+    coef = da_idx.polyfit(dim='time', deg=1, skipna=True).polyfit_coefficients
+    beta      = coef.sel(degree=1)   # pendiente
+    intercept = coef.sel(degree=0)   # término independiente
+
+    # 4 Reconstruir la parte explicada y restaurar las fechas reales
+    fitted = beta * da_idx['time'] + intercept
+    fitted = fitted.assign_coords(time=da['time'])
+
+    if return_coef is True:
+        result = beta
+    else:
+        result = fitted
+
+    return result
 
 def find_top_events(index, num_of_events):
     pos = index.sortby(index, ascending=False).isel(time=slice(num_of_events))
@@ -265,14 +285,7 @@ def select_to_events(field, index_pos, index_neg):
 
     return top_pos_events, top_neg_events
 
-
-
-def PlotSSTOne(field, levels = np.arange(-1,1.1,0.1), dpi=100):
-
-    fig = plt.figure(figsize=(8, 4), dpi=dpi)
-    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
-    crs_latlon = ccrs.PlateCarree()
-    ax.set_extent([0, 359, -50, 50], crs=crs_latlon)
+def PlotOne(field, levels = np.arange(-1,1.1,0.1), dpi=100, sa=False):
 
     cbar = [
         # deep → pale blue              |  WHITE  |  pale → deep red
@@ -287,6 +300,19 @@ def PlotSSTOne(field, levels = np.arange(-1,1.1,0.1), dpi=100):
     cbar.set_over('#641B00')
     cbar.set_under('#012A52')
     cbar.set_bad(color='white')
+
+    if sa is True:
+        extend = [275, 330, -60, 20]
+        fig_size = (4, 6)
+        cbar = 'BrBG'
+    else:
+        fig_size = (8, 4)
+        extend = [0, 359, -40, 40]
+
+    fig = plt.figure(figsize=fig_size, dpi=dpi)
+    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
+    crs_latlon = ccrs.PlateCarree()
+    ax.set_extent(extend, crs=crs_latlon)
 
     try:
         field_to_plot = field['var']
@@ -347,10 +373,10 @@ top_iodp, top_iodn = find_top_events(dmi_wo_n34_son, 7)
 top_en_events, top_ln_events = select_to_events(sst, top_en, top_ln)
 top_iodp_events, top_iodn_events = select_to_events(sst, top_iodp, top_iodn)
 
-# plot_sst_times(top_en_events)
-# plot_sst_times(top_iodp_events)
-# plot_sst_times(top_ln_events)
-# plot_sst_times(top_iodn_events)
+# plot_times(top_en_events)
+# plot_times(top_iodp_events)
+# plot_times(top_ln_events)
+# plot_times(top_iodn_events)
 # no hay selección de eventos que en la realidad sean de signo opuesto,
 # aunque algunos pueden estar cerca de ser neutros.
 # sin embargo ninguno garantiza ser puro.
@@ -360,24 +386,27 @@ top_iodp_events, top_iodn_events = select_to_events(sst, top_iodp, top_iodn)
 #  obtienen en el paper.
 
 # Campo que solo tenga N34, restandole la regresion del dmi sin n34.
-sst_wo_dmi = sst - RegreField(sst, dmi_wo_n34_son)
-sst_wo_n34 = sst - RegreField(sst, n34_wo_dmi_son)
+sst_wo_dmi = sst - RegreField(sst, dmi_son)
+sst_wo_n34 = sst - RegreField(sst, n34_son)
+
+# sst_wo_dmi = sst - RegreFieldCoef(sst, dmi_wo_n34_son)
+# sst_wo_n34 = sst - RegreFieldCoef(sst, n34_wo_dmi_son)
 
 top_en_reg_events, top_ln_reg_events = \
     select_to_events(sst_wo_dmi, top_en, top_ln)
 top_iodp_reg_events, top_iodn_reg_events = \
     select_to_events(sst_wo_n34, top_iodp, top_iodn)
 
-# plot_sst_times(top_en_reg_events)
-# plot_sst_times(top_iodp_reg_events)
-# plot_sst_times(top_ln_reg_events)
-# plot_sst_times(top_iodn_reg_events)
+plot_times(top_en_reg_events)
+plot_times(top_iodp_reg_events)
+# plot_times(top_ln_reg_events)
+# plot_times(top_iodn_reg_events)
 
 # las composiciones dan muy mal. solo bien los positivos
-PlotSSTOne(top_en_reg_events.mean('time'))
-PlotSSTOne(top_iodp_reg_events.mean('time'))
-PlotSSTOne(top_ln_reg_events.mean('time'))
-PlotSSTOne(top_iodn_reg_events.mean('time'))
+PlotOne(top_en_reg_events.mean('time'))
+PlotOne(top_iodp_reg_events.mean('time'))
+PlotOne(top_ln_reg_events.mean('time'))
+PlotOne(top_iodn_reg_events.mean('time'))
 
 # EOF ------------------------------------------------------------------------ #
 """
@@ -388,7 +417,7 @@ la regresion?
 filtered_sst = xr.apply_ufunc(
     bandpass_filter,
     sst['var'],
-    7,                       # max_period
+    6.5,                       # max_period
     input_core_dims=[['time'], [],],
     output_core_dims=[['time']],
     vectorize=True,
@@ -418,14 +447,9 @@ pcs_n34 = solver_n34.pcs(pcscaling=pcscal)
 var_per_n34 = np.around(solver_n34.varianceFraction(neigs=3).values * 100,1)
 
 pc_n34 = pcs_n34.sel(mode=0) # indice ~n34
-
-plt.imshow(-1*eof_n34[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.title(f'var exp {var_per_n34[0]}%')
-plt.colorbar()
-plt.show()
-
+print(f'var exp {var_per_n34[0]}%')
+PlotOne(-1*eof_n34[0])
 PlotBars(pc_n34)
-
 plotindex(n34_son, -1*pc_n34, title='N34 EOF', label='EOF')
 
 # EOF indico - IOD ---------------- #
@@ -435,13 +459,9 @@ pcs_dmi = solver_dmi.pcs(pcscaling=pcscal)
 var_per_dmi = np.around(solver_dmi.varianceFraction(neigs=3).values * 100, 1)
 
 pc_dmi = pcs_dmi.sel(mode=0)# + pcs_dmi.sel(mode=1)
-
-plt.imshow(-1*eof_dmi[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.title(f'var exp {var_per_dmi[0]}%')
-plt.colorbar()
-plt.show()
+print(f'var exp {var_per_dmi[0]}%')
+PlotOne(-1*eof_dmi[0])
 plotindex(dmi_son, -1*pc_dmi, title='DMI EOF', label='EOF')
-
 PlotBars(pc_dmi)
 
 # EOF pacifico-indico ---------------- #
@@ -451,12 +471,9 @@ pcs_indpac = solver_indpac.pcs(pcscaling=pcscal)
 var_per = np.around(solver_indpac.varianceFraction(neigs=3).values * 100,1)
 
 pc_indpac = pcs_indpac.sel(mode=0)
-
-plt.imshow(-1*eof_indpac[0], vmin=-1, vmax=1, cmap='RdBu_r')
-plt.colorbar()
-plt.title(f'var exp {var_per[0]}%')
-plt.show()
-
+print(f'var exp {var_per[0]}%')
+PlotOne(-1*eof_indpac[0])
+PlotBars(pc_indpac)
 plotindex(n34_son, -1*pc_indpac, title='indpac EOF vs N34 ',
           label='EOF')
 plotindex(dmi_son, -1*pc_indpac, title='indpac EOF vs DMI ',
@@ -487,23 +504,79 @@ top_en_pc, top_ln_pc = find_top_events(pc_n34_wo_dmi, 7)
 top_iodp_pc, top_iodn_pc = find_top_events(pc_dmi_wo_n34, 7)
 # Gran coincidencia de años seleccionados aca con los del paper
 
-sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi_wo_n34)
-sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34_wo_dmi)
+sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi)
+sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34)
 
 top_en_pc_events, top_ln_pc_events = \
     select_to_events(sst_wo_dmi_pc, top_en_pc, top_ln_pc)
 top_iodp_pc_events, top_iodn_pc_events = \
     select_to_events(sst_wo_n34_pc, top_iodp_pc, top_iodn_pc)
 
-#plot_sst_times(top_en_pc_events)
-# plot_sst_times(top_iodp_pc_events)
-# plot_sst_times(top_ln_pc_events)
-# plot_sst_times(top_iodn_pc_events)
+# top_en_pc_events, top_ln_pc_events = \
+#     select_to_events(sst_wo_dmi_pc,
+#                      [1965, 1968, 1971, 1986, 1997, 2009, 2010],
+#                      [1955, 1967, 1973, 1988, 1995, 2007, 2016])
+# top_iodp_pc_events, top_iodn_pc_events = \
+#     select_to_events(sst_wo_n34_pc,
+#                      [1967, 1973, 1977, 1983, 1988, 1995, 2007],
+#                      [1960, 1965, 1968, 1971, 1986, 1996, 2009])
+#
+
+plot_times(top_en_pc_events)
+plot_times(top_iodp_pc_events)
+plot_times(top_ln_pc_events)
+plot_times(top_iodn_pc_events)
 # Al igual que antes los eventos no son puros
 
 # Las composiciones dan bastante bien
-PlotSSTOne(top_en_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
-PlotSSTOne(top_iodp_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
-PlotSSTOne(top_ln_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
-PlotSSTOne(top_iodn_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotOne(top_en_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotOne(top_iodp_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotOne(top_ln_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+PlotOne(top_iodn_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+# ---------------------------------------------------------------------------- #
+# pp
+data_dir_t_pp = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
+                'data_obs_d_w_c/'
+prec = xr.open_dataset(f'{data_dir_t_pp}ppgpcc_w_c_d_1_SON.nc')
+if len(prec.sel(lat=slice(20, -60)).lat) > 0:
+    prec = prec.sel(lat=slice(20, -60), lon=slice(275, 330))
+else:
+    prec = prec.sel(lat=slice(-60, 20), lon=slice(275, 330))
+
+prec = prec.sel(time=slice('1951-10-01', '2016-10-01'))
+prec = prec/prec.std('time')
+
+filtered_prec = xr.apply_ufunc(
+    bandpass_filter,
+    prec['var'],
+    6.5,                       # max_period
+    input_core_dims=[['time'], [],],
+    output_core_dims=[['time']],
+    vectorize=True,
+    dask=None,
+    output_dtypes=[sst['var'].dtype],
+    keep_attrs=True
+)
+
+filtered_prec = filtered_prec.transpose('time', 'lat', 'lon')
+
+prec_wo_dmi_pc = filtered_prec - RegreField(filtered_prec, pc_dmi)
+prec_wo_n34_pc = filtered_prec - RegreField(filtered_prec, pc_n34)
+
+top_en_pc_prec_events, top_ln_pc_prec_events = \
+    select_to_events(prec_wo_dmi_pc, top_en_pc, top_ln_pc)
+top_iodp_pc_prec_events, top_iodn_prec_pc_events = \
+    select_to_events(prec_wo_n34_pc, top_iodp_pc, top_iodn_pc)
+
+plot_times(top_en_pc_prec_events, sa=True)
+plot_times(top_iodp_pc_prec_events, sa=True)
+plot_times(top_ln_pc_prec_events, sa=True)
+plot_times(top_iodn_prec_pc_events, sa=True)
+# Al igual que antes los eventos no son puros
+
+# Las composiciones dan bastante bien
+PlotOne(top_en_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_iodp_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_ln_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_iodn_prec_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
 # ---------------------------------------------------------------------------- #
