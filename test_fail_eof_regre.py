@@ -336,8 +336,11 @@ n34_or = Nino34CPC(xr.open_dataset(
     "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc"),
     start=1920, end=2020)[0]
 
-dmi = dmi_or.sel(time=slice('1951-01-01', '2016-12-01'))
-n34 = n34_or.sel(time=slice('1951-01-01', '2016-12-01'))
+year_start = 1951
+year_end = 2016
+
+dmi = dmi_or.sel(time=slice(f'{year_start}-01-01', f'{year_end}-12-01'))
+n34 = n34_or.sel(time=slice(f'{year_start}-01-01', f'{year_end}-12-01'))
 
 n34_son = n34.sel(time=n34.time.dt.month.isin(10))
 dmi_son = dmi.sel(time=dmi.time.dt.month.isin(10))
@@ -345,7 +348,7 @@ dmi_son = dmi.sel(time=dmi.time.dt.month.isin(10))
 sst = xr.open_dataset(
     "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc")
 sst = sst.drop_dims('nbnds')
-sst = sst.sel(time=slice('1951-01-01', '2016-12-01')) # como en el paper
+sst = sst.sel(time=slice(f'{year_start}-01-01', f'{year_end}-12-01')) # como en el paper
 sst = sst.rename({'sst':'var'})
 
 sst = xrFieldTimeDetrend(sst, 'time') # Detrend
@@ -543,7 +546,7 @@ if len(prec.sel(lat=slice(20, -60)).lat) > 0:
 else:
     prec = prec.sel(lat=slice(-60, 20), lon=slice(275, 330))
 
-prec = prec.sel(time=slice('1951-10-01', '2016-10-01'))
+prec = prec.sel(time=slice(f'{year_start}-10-01', f'{year_end}-10-01'))
 prec = prec/prec.std('time')
 
 filtered_prec = xr.apply_ufunc(
@@ -580,3 +583,23 @@ PlotOne(top_iodp_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=T
 PlotOne(top_ln_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
 PlotOne(top_iodn_prec_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
 # ---------------------------------------------------------------------------- #
+
+prec_wo_dmi = prec - RegreField(prec, dmi_wo_n34_son)
+prec_wo_n34 = prec - RegreField(prec, n34_wo_dmi_son)
+
+top_en_prec_events, top_ln_prec_events = \
+    select_to_events(prec_wo_dmi_pc, top_en_pc, top_ln_pc)
+top_iodp_prec_events, top_iodn_prec_events = \
+    select_to_events(prec_wo_n34_pc, top_iodp_pc, top_iodn_pc)
+
+plot_times(top_en_prec_events, sa=True)
+plot_times(top_iodp_prec_events, sa=True)
+plot_times(top_ln_prec_events, sa=True)
+plot_times(top_iodn_prec_events, sa=True)
+# Al igual que antes los eventos no son puros
+
+# Las composiciones dan bastante bien
+PlotOne(top_en_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_iodp_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_ln_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_iodn_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
