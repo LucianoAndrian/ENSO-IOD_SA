@@ -1402,8 +1402,8 @@ if plot_bins_2d:
 
     cases_ordenados_f = []
     num_ordenados_f = []
-    for v, v_scale, v_cbar in zip(['tref', 'prec'], [t_scale, pp_scale],
-                                  [cbar_bins2d, cbar_pp_bins2d]):
+    for v, v_scale, v_cbar in zip(['prec', 'tref'], [pp_scale, t_scale],
+                                  [cbar_pp_bins2d, cbar_bins2d]):
 
         if v == 'prec':
             fix = 30
@@ -1468,14 +1468,14 @@ if plot_bins_2d:
             num_ordenados_f.append(num_ordenados)
 
 
-    cases_ordenados_f[-1] = None
+    cases_ordenados_f[-4] = None
     PlotBins2DTwoVariables(data_bins=cases_ordenados_f,
                            num_bins=num_ordenados_f,
                            bin_limits=bin_limits, num_cols=3,
-                           variable_v1='Temp.', variable_v2='Precip.',
-                           levels_v1=t_scale, cmap_v1=cbar_bins2d,
-                           levels_v2=pp_scale, cmap_v2=cbar_pp_bins2d,
-                           color_thr_v1=1, color_thr_v2=7,
+                           variable_v2='Temp.', variable_v1='Precip.',
+                           levels_v2=t_scale, cmap_v2=cbar_bins2d,
+                           levels_v1=pp_scale, cmap_v1=cbar_pp_bins2d,
+                           color_thr_v2=1, color_thr_v1=7,
                            title=title,
                            save=save, name_fig='figure11',
                            out_dir=out_dir, dpi=dpi, high=3.5, width=11,
