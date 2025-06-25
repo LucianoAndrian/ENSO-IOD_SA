@@ -330,8 +330,47 @@ def PlotOne(field, levels = np.arange(-1,1.1,0.1), dpi=100, sa=False):
 
     plt.show()
 
+def DMINOAA():
+
+    import requests
+    url = 'https://www.cpc.ncep.noaa.gov/products/international/ocean_monitoring/indian/IODMI/mnth.ersstv5.clim19912020.dmi_current.txt'
+
+    response = requests.get(url)
+    response.raise_for_status()
+    lines = response.text.splitlines()
+
+    for i, line in enumerate(lines):
+        if line.strip().startswith('Year') and 'DMI' in line:
+            start_idx = i + 1
+            break
+
+    data = []
+    for line in lines[start_idx:]:
+        if line.strip() == '':
+            continue
+        parts = line.split()
+        if len(parts) == 5:
+            year, month, wtio, setio, dmi = parts
+            data.append({
+                'year': int(year),
+                'month': int(month),
+                'DMI': float(dmi)
+            })
+
+
+    df = pd.DataFrame(data)
+
+    df['time'] = pd.to_datetime(dict(year=df['year'], month=df['month'], day=1))
+
+    dmi = xr.DataArray(df['DMI'].values, coords=[df['time']], dims='time',
+                       name='DMI')
+
+    return dmi
+
+
 # ---------------------------------------------------------------------------- #
 dmi_or = DMI(filter_bwa=False, start_per='1920', end_per='2020')[2]
+dmi_or = DMINOAA()
 n34_or = Nino34CPC(xr.open_dataset(
     "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc"),
     start=1920, end=2020)[0]
