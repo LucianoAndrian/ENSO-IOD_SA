@@ -23,6 +23,9 @@ warnings.filterwarnings("ignore")
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from matplotlib import colors
+import matplotlib.pyplot as plt
+import pandas as pd
+import matplotlib.dates as mdates
 
 # ---------------------------------------------------------------------------- #
 def plotindex(index, indexwo, title='title', label='label'):
@@ -367,10 +370,49 @@ def DMINOAA():
 
     return dmi
 
+def PlotTimeSeries(original, residuo, events_select=None,
+                   label1='Original', label2='Residuo', shift_year=True):
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+
+    if shift_year:
+        original_time = pd.to_datetime(original.time.values) - pd.DateOffset(years=1)
+        residuo_time = pd.to_datetime(residuo.time.values) - pd.DateOffset(years=1)
+    else:
+        original_time = original.time.values
+        residuo_time = residuo.time.values
+
+
+    ax.plot(original_time, original.values, color='black', label=label1)
+    ax.plot(residuo_time, residuo.values, color='red', label=label2)
+
+    if events_select is not None:
+
+        if hasattr(events_select, 'values'):
+            events_select = events_select.values
+
+        events_set = set(pd.to_datetime(events_select))
+        mask = pd.to_datetime(original.time.values).isin(events_set)
+        ax.plot(original_time[mask], original.values[mask], 'o', color='black')
+        ax.plot(residuo_time[mask], residuo.values[mask], 'o', color='red')
+
+    ax.set_ylim((-3,3))
+    ax.set_xlabel('Año')
+    ax.set_title('')
+    ax.legend()
+    ax.grid(True)
+
+
+    ax.xaxis.set_major_locator(mdates.YearLocator(base=5))  # cada 5 años
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+
+    plt.tight_layout()
+    plt.show()
 
 # ---------------------------------------------------------------------------- #
 dmi_or = DMI(filter_bwa=False, start_per='1920', end_per='2020')[2]
 dmi_or = DMINOAA()
+dmi_or = dmi_or.rolling(time=3, center=True).mean()
 n34_or = Nino34CPC(xr.open_dataset(
     "/pikachu/datos/luciano.andrian/verif_2019_2023/sst.mnmean.nc"),
     start=1920, end=2020)[0]
@@ -542,6 +584,8 @@ print(f'Correlacion pc_n34 - pc_dmi: {corr_pc_n34_dmi}')
 # Que pasa si se hace regresion con las pcs?
 pc_dmi_wo_n34, pc_n34_wo_dmi = LinearReg1_D(-1*pc_n34, -1*pc_dmi)
 
+filtered_sst = (filtered_sst - filtered_sst.mean('time'))/filtered_sst.std('time')
+
 top_en_pc, top_ln_pc = find_top_events(pc_n34_wo_dmi, 7)
 top_iodp_pc, top_iodn_pc = find_top_events(pc_dmi_wo_n34, 7)
 # Gran coincidencia de años seleccionados aca con los del paper
@@ -562,7 +606,7 @@ top_iodp_pc_events, top_iodn_pc_events = \
 #     select_to_events(sst_wo_n34_pc,
 #                      [1967, 1973, 1977, 1983, 1988, 1995, 2007],
 #                      [1960, 1965, 1968, 1971, 1986, 1996, 2009])
-#
+
 
 plot_times(top_en_pc_events)
 plot_times(top_iodp_pc_events)
@@ -575,6 +619,36 @@ PlotOne(top_en_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 PlotOne(top_iodp_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 PlotOne(top_ln_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 PlotOne(top_iodn_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
+
+# ---------------------------------------------------------------------------- #
+PlotTimeSeries(n34_son, -pc_n34, events_select=None,
+                   label1='ONI', label2='PC_ONI')
+PlotTimeSeries(dmi_son, -pc_dmi, events_select=None,
+                   label1='DMI', label2='PC_DMI')
+
+PlotTimeSeries(-pc_n34, -pc_dmi, events_select=top_en_pc_events.time,
+                   label1='PC_ONI', label2='PC_DMI')
+
+PlotTimeSeries(-pc_n34, RegreField(-pc_n34, -pc_dmi), events_select=top_en_pc_events.time,
+                   label1='PC_ONI', label2='PC_ONI_PRED_by_DMI')
+PlotTimeSeries(-pc_n34, pc_n34_wo_dmi, events_select=top_en_pc_events.time,
+                   label1='PC_ONI', label2='PC_ONI_Residuo')
+
+PlotTimeSeries(-pc_dmi, RegreField(-pc_dmi, -pc_n34), events_select=top_iodn_pc_events.time,
+                   label1='PC_DMI', label2='PC_DMI_PRED_by_ONI')
+PlotTimeSeries(-pc_dmi, pc_dmi_wo_n34, events_select=top_iodn_pc_events.time,
+                   label1='PC_DMI', label2='PC_DMI_Residuo')
+
+PlotTimeSeries(-pc_n34, RegreField(-pc_n34, -pc_dmi), events_select=top_ln_pc_events.time,
+                   label1='PC_ONI', label2='PC_ONI_PRED_by_DMI')
+PlotTimeSeries(-pc_n34, pc_n34_wo_dmi, events_select=top_ln_pc_events.time,
+                   label1='PC_ONI', label2='PC_ONI_Residuo')
+
+PlotTimeSeries(-pc_dmi, RegreField(-pc_dmi, -pc_n34), events_select=top_iodp_pc_events.time,
+                   label1='PC_DMI', label2='PC_DMI_PRED_by_ONI')
+PlotTimeSeries(-pc_dmi, pc_dmi_wo_n34, events_select=top_iodp_pc_events.time,
+                   label1='PC_DMI', label2='PC_DMI_Residuo')
+
 # ---------------------------------------------------------------------------- #
 # pp
 data_dir_t_pp = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
