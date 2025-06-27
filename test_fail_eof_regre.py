@@ -288,7 +288,8 @@ def select_to_events(field, index_pos, index_neg):
 
     return top_pos_events, top_neg_events
 
-def PlotOne(field, levels = np.arange(-1,1.1,0.1), dpi=100, sa=False):
+def PlotOne(field, levels = np.arange(-1,1.1,0.1), dpi=100, sa=False,
+            extend=None):
 
     cbar = [
         # deep → pale blue              |  WHITE  |  pale → deep red
@@ -305,12 +306,14 @@ def PlotOne(field, levels = np.arange(-1,1.1,0.1), dpi=100, sa=False):
     cbar.set_bad(color='white')
 
     if sa is True:
-        extend = [275, 330, -60, 20]
+        if extend is None:
+            extend = [275, 330, -60, 20]
         fig_size = (4, 6)
         cbar = 'BrBG'
     else:
         fig_size = (8, 4)
-        extend = [0, 359, -40, 40]
+        if extend is None:
+            extend = [0, 359, -40, 40]
 
     fig = plt.figure(figsize=fig_size, dpi=dpi)
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
@@ -370,40 +373,44 @@ def DMINOAA():
 
     return dmi
 
-def PlotTimeSeries(original, residuo, events_select=None,
-                   label1='Original', label2='Residuo', shift_year=True):
+def PlotTimeSeries(serie1, serie2, serie3, events_select=None,
+                   label1='Serie 1', label2='Serie 2', label3='Serie 3',
+                   shift_year=True, title=''):
 
     fig, ax = plt.subplots(figsize=(8, 3))
 
     if shift_year:
-        original_time = pd.to_datetime(original.time.values) - pd.DateOffset(years=1)
-        residuo_time = pd.to_datetime(residuo.time.values) - pd.DateOffset(years=1)
+        time1 = pd.to_datetime(serie1.time.values) - pd.DateOffset(years=1)
+        time2 = pd.to_datetime(serie2.time.values) - pd.DateOffset(years=1)
+        time3 = pd.to_datetime(serie3.time.values) - pd.DateOffset(years=1)
     else:
-        original_time = original.time.values
-        residuo_time = residuo.time.values
+        time1 = serie1.time.values
+        time2 = serie2.time.values
+        time3 = serie3.time.values
 
-
-    ax.plot(original_time, original.values, color='black', label=label1)
-    ax.plot(residuo_time, residuo.values, color='red', label=label2)
+    ax.hlines(0, time1[0] , time1[-1], colors='k', linewidth=0.8)
+    ax.plot(time1, serie1.values, color='black', label=label1)
+    ax.plot(time2, serie2.values, color='dodgerblue', label=label2)
+    ax.plot(time3, serie3.values, color='red', label=label3)
 
     if events_select is not None:
-
         if hasattr(events_select, 'values'):
             events_select = events_select.values
 
         events_set = set(pd.to_datetime(events_select))
-        mask = pd.to_datetime(original.time.values).isin(events_set)
-        ax.plot(original_time[mask], original.values[mask], 'o', color='black')
-        ax.plot(residuo_time[mask], residuo.values[mask], 'o', color='red')
+        mask = pd.to_datetime(serie1.time.values).isin(events_set)
 
-    ax.set_ylim((-3,3))
+        ax.plot(time1[mask], serie1.values[mask], 'o', color='black')
+        ax.plot(time2[mask], serie2.values[mask], 'o', color='dodgerblue')
+        ax.plot(time3[mask], serie3.values[mask], 'o', color='red')
+
+    ax.set_ylim((-3, 3))
     ax.set_xlabel('Año')
-    ax.set_title('')
-    ax.legend()
+    ax.set_title(title)
+    ax.legend(loc=2)
     ax.grid(True)
 
-
-    ax.xaxis.set_major_locator(mdates.YearLocator(base=5))  # cada 5 años
+    ax.xaxis.set_major_locator(mdates.YearLocator(base=5))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 
     plt.tight_layout()
@@ -621,33 +628,37 @@ PlotOne(top_ln_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 PlotOne(top_iodn_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1))
 
 # ---------------------------------------------------------------------------- #
-PlotTimeSeries(n34_son, -pc_n34, events_select=None,
-                   label1='ONI', label2='PC_ONI')
-PlotTimeSeries(dmi_son, -pc_dmi, events_select=None,
-                   label1='DMI', label2='PC_DMI')
+PlotTimeSeries(serie1=-pc_n34, serie2=-pc_dmi, serie3=-pc_indpac,
+               events_select=None,
+               label1='PC_ONI', label2='PC_DMI', label3='PC_INDPAC')
 
-PlotTimeSeries(-pc_n34, -pc_dmi, events_select=top_en_pc_events.time,
-                   label1='PC_ONI', label2='PC_DMI')
+PlotTimeSeries(serie1=-pc_n34, serie2=RegreField(-pc_n34, -pc_dmi),
+               serie3=pc_n34_wo_dmi,  events_select=top_en_pc_events.time,
+               label1='PC_ONI',
+               label2='PC_ONI_PRED_by_DMI',
+               label3='PC_ONI_Residuo',
+               title='El Niño')
 
-PlotTimeSeries(-pc_n34, RegreField(-pc_n34, -pc_dmi), events_select=top_en_pc_events.time,
-                   label1='PC_ONI', label2='PC_ONI_PRED_by_DMI')
-PlotTimeSeries(-pc_n34, pc_n34_wo_dmi, events_select=top_en_pc_events.time,
-                   label1='PC_ONI', label2='PC_ONI_Residuo')
+PlotTimeSeries(serie1=-pc_n34, serie2=RegreField(-pc_n34, -pc_dmi),
+               serie3=pc_n34_wo_dmi,  events_select=top_ln_pc_events.time,
+               label1='PC_ONI',
+               label2='PC_ONI_PRED_by_DMI',
+               label3='PC_ONI_Residuo',
+               title='La Niña')
 
-PlotTimeSeries(-pc_dmi, RegreField(-pc_dmi, -pc_n34), events_select=top_iodn_pc_events.time,
-                   label1='PC_DMI', label2='PC_DMI_PRED_by_ONI')
-PlotTimeSeries(-pc_dmi, pc_dmi_wo_n34, events_select=top_iodn_pc_events.time,
-                   label1='PC_DMI', label2='PC_DMI_Residuo')
+PlotTimeSeries(serie1=-pc_dmi, serie2=RegreField(-pc_dmi, -pc_n34),
+               serie3=pc_dmi_wo_n34,  events_select=top_iodn_pc_events.time,
+               label1='PC_DMI',
+               label2='PC_DMI_PRED_by_ONI',
+               label3='PC_DMI_Residuo',
+               title='IODn')
 
-PlotTimeSeries(-pc_n34, RegreField(-pc_n34, -pc_dmi), events_select=top_ln_pc_events.time,
-                   label1='PC_ONI', label2='PC_ONI_PRED_by_DMI')
-PlotTimeSeries(-pc_n34, pc_n34_wo_dmi, events_select=top_ln_pc_events.time,
-                   label1='PC_ONI', label2='PC_ONI_Residuo')
-
-PlotTimeSeries(-pc_dmi, RegreField(-pc_dmi, -pc_n34), events_select=top_iodp_pc_events.time,
-                   label1='PC_DMI', label2='PC_DMI_PRED_by_ONI')
-PlotTimeSeries(-pc_dmi, pc_dmi_wo_n34, events_select=top_iodp_pc_events.time,
-                   label1='PC_DMI', label2='PC_DMI_Residuo')
+PlotTimeSeries(serie1=-pc_dmi, serie2=RegreField(-pc_dmi, -pc_n34),
+               serie3=pc_dmi_wo_n34,  events_select=top_iodp_pc_events.time,
+               label1='PC_DMI',
+               label2='PC_DMI_PRED_by_ONI',
+               label3='PC_DMI_Residuo',
+               title='IODp')
 
 # ---------------------------------------------------------------------------- #
 # pp
@@ -670,7 +681,7 @@ filtered_prec = xr.apply_ufunc(
     output_core_dims=[['time']],
     vectorize=True,
     dask=None,
-    output_dtypes=[sst['var'].dtype],
+    output_dtypes=[prec['var'].dtype],
     keep_attrs=True
 )
 
@@ -696,23 +707,41 @@ PlotOne(top_iodp_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=T
 PlotOne(top_ln_pc_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
 PlotOne(top_iodn_prec_pc_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
 # ---------------------------------------------------------------------------- #
+data_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1940_2020/'
+hgt200 = xr.open_dataset(f'{data_dir}HGT200_SON_mer_d_w.nc')
+hgt200 = hgt200.sel(time=slice(f'{year_start}-10-01', f'{year_end}-10-01'))
+hgt200 = hgt200/hgt200.std('time')
 
-prec_wo_dmi = prec - RegreField(prec, dmi_wo_n34_son)
-prec_wo_n34 = prec - RegreField(prec, n34_wo_dmi_son)
 
-top_en_prec_events, top_ln_prec_events = \
-    select_to_events(prec_wo_dmi_pc, top_en_pc, top_ln_pc)
-top_iodp_prec_events, top_iodn_prec_events = \
-    select_to_events(prec_wo_n34_pc, top_iodp_pc, top_iodn_pc)
+filtered_hgt200 = xr.apply_ufunc(
+    bandpass_filter,
+    hgt200['var'],
+    6.5,                       # max_period
+    input_core_dims=[['time'], [],],
+    output_core_dims=[['time']],
+    vectorize=True,
+    dask=None,
+    output_dtypes=[hgt200['var'].dtype],
+    keep_attrs=True
+)
 
-plot_times(top_en_prec_events, sa=True)
-plot_times(top_iodp_prec_events, sa=True)
-plot_times(top_ln_prec_events, sa=True)
-plot_times(top_iodn_prec_events, sa=True)
+hgt200_wo_dmi_pc = filtered_hgt200 - RegreField(filtered_hgt200, pc_dmi)
+hgt200_wo_n34_pc = filtered_hgt200 - RegreField(filtered_hgt200, pc_n34)
+
+top_en_pc_hgt200_events, top_ln_pc_hgt200_events = \
+    select_to_events(hgt200_wo_dmi_pc, top_en_pc, top_ln_pc)
+top_iodp_pc_hgt200_events, top_iodn_hgt200_pc_events = \
+    select_to_events(hgt200_wo_n34_pc, top_iodp_pc, top_iodn_pc)
+
+plot_times(top_en_pc_hgt200_events)
+plot_times(top_iodp_pc_hgt200_events)
+plot_times(top_ln_pc_hgt200_events)
+plot_times(top_iodn_hgt200_pc_events)
 # Al igual que antes los eventos no son puros
 
 # Las composiciones dan bastante bien
-PlotOne(top_en_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
-PlotOne(top_iodp_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
-PlotOne(top_ln_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
-PlotOne(top_iodn_prec_events.mean('time'), levels=np.arange(-0.9,1,0.1), sa=True)
+PlotOne(top_en_pc_hgt200_events.mean('time'), extend=[0, 359, -80, 40])
+PlotOne(top_iodp_pc_hgt200_events.mean('time'), extend=[0, 359, -80, 40])
+PlotOne(top_ln_pc_hgt200_events.mean('time'), extend=[0, 359, -80, 40])
+PlotOne(top_iodn_hgt200_pc_events.mean('time'), extend=[0, 359, -80, 40])
+
