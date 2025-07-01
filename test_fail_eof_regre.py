@@ -600,6 +600,12 @@ top_iodp_pc, top_iodn_pc = find_top_events(pc_dmi_wo_n34, 7)
 sst_wo_dmi_pc = filtered_sst - RegreField(filtered_sst, pc_dmi)
 sst_wo_n34_pc = filtered_sst - RegreField(filtered_sst, pc_n34)
 
+# sst_ensopure = RegreField(filtered_sst, pc_n34_wo_dmi)
+# sst_iodpure = RegreField(filtered_sst, pc_dmi_wo_n34)
+# sst_no_iod = filtered_sst - RegreField(filtered_sst, pc_dmi_wo_n34)
+# sst_no_enso = filtered_sst - RegreField(filtered_sst, pc_n34_wo_dmi)
+
+
 top_en_pc_events, top_ln_pc_events = \
     select_to_events(sst_wo_dmi_pc, top_en_pc, top_ln_pc)
 top_iodp_pc_events, top_iodn_pc_events = \
