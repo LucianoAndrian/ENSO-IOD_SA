@@ -5,7 +5,7 @@ Figuras ENSO-IOD-SA
 save = True
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 plot_bins = False
-plot_bins_2d = True
+plot_bins_2d = False
 plot_pdf = False
 # ---------------------------------------------------------------------------- #
 import os
@@ -945,12 +945,15 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         fix_clim = 0
         v_in_name = v
         scale_in_hgt = aux_scale_hgt
+        plot_regiones = True
     elif v == 'tref':
         fix = 1
         fix_clim = 273
         v_in_name = v
         scale_in_hgt = aux_scale_hgt
+        plot_regiones = True
     else:
+        plot_regiones = False
         fix = 9.8
         fix_clim = 0
         if v == 'hgt750':
@@ -1169,7 +1172,6 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         clim = clim_hgt
         ocean_mask = False
 
-
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
                                    cmap=v_cbar, titles=aux_num,
                                    namefig=f'{v}_cfsv2_comp_by_magnitude',
@@ -1189,7 +1191,8 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    plot_step=1,
                                    cbar_pos='V',
                                    sig_data=cases_ordenados_sig,
-                                   hatches='...')
+                                   hatches='...',
+                                   plot_regiones=plot_regiones)
 
     # SNR plot
     if check_t_pp is True:
@@ -1213,7 +1216,8 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    ocean_mask=ocean_mask,
                                    data_ctn_no_ocean_mask=True,
                                    plot_step=1,
-                                   cbar_pos='V')
+                                   cbar_pos='V',
+                                   plot_regiones=False)
 
 print('Done CFSv2 Composite by magnitude ------------------------------------ ')
 print(' --------------------------------------------------------------------- ')

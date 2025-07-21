@@ -3298,7 +3298,8 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                    clim_plot_ctn=None, clim_levels_ctn=None,
                                    pdf=True, ocean_mask=False,
                                    data_ctn_no_ocean_mask=False,
-                                   sig_data=None, hatches=None):
+                                   sig_data=None, hatches=None,
+                                   plot_regiones=False):
 
     # cantidad de filas necesarias
     num_cols = 5
@@ -3444,6 +3445,27 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                 gl.ylocator = plt.MultipleLocator(20)
                 gl.xlocator = plt.MultipleLocator(60)
 
+                if plot_regiones is True:
+                    names_regiones_sa = ['Am', 'NeB', 'N-SESA', 'S-SESA',
+                                         'Chile-Cuyo', 'Patagonia']
+                    lat_regiones_sa = [[-13, 2], [-15, 2], [-29, -17],
+                                       [-39, -25],
+                                       [-40, -30], [-56, -40]]
+                    lon_regiones_sa = [[291, 304], [311, 325], [303, 315],
+                                       [296, 306], [285, 293],
+                                       [287, 295]]
+
+                    for r, rname in enumerate(names_regiones_sa):
+                        w = lon_regiones_sa[r][1] - lon_regiones_sa[r][0]
+                        h = np.abs(lat_regiones_sa[r][0]) - np.abs(
+                            lat_regiones_sa[r][1])
+                        ax_new.add_patch(
+                            mpatches.Rectangle(
+                                xy=[lon_regiones_sa[r][0], lat_regiones_sa[r][0]],
+                                width=w, height=h, facecolor='None', alpha=1,
+                                edgecolor='k', linewidth=0.8,
+                                transform=ccrs.PlateCarree()))
+
                 for spine in ax_new.spines.values():
                     spine.set_linewidth(0.5)
 
@@ -3581,7 +3603,6 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
         plt.close()
     else:
         plt.show()
-
 
 def PlotFinal14(data, levels, cmap, titles, namefig, save, dpi, out_dir,
                 sig_points=None, lons=None, levels2=None, cmap2=None,
