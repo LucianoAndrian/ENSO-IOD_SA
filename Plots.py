@@ -487,6 +487,9 @@ neg_comp_hgt750_200_sig=[]
 
 pos_comp_hgt750=[]
 neg_comp_hgt750=[]
+
+pos_num=[]
+neg_num=[]
 for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
     print(v)
     if v != 'HGT200' and v != 'HGT750':
@@ -502,6 +505,7 @@ for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
 
 
     # Cases ------------------------------------------------------------------ #
+    aux_num_cases = []
     for c in cases:
         if v != 'HGT200' and v != 'HGT750':
             print('using Opendataset')
@@ -516,6 +520,8 @@ for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
 
         comp1, num_case = CaseComp(data, s, mmonth=[9, 11], c=c,
                                    nc_date_dir=nc_date_dir)
+        aux_num_cases.append(num_case)
+
 
         if v == 'tcru_w_c_d_0.25':
             comp1 = comp1.sel(lat=slice(None, None, -1))
@@ -533,9 +539,11 @@ for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
             if 'pos' in c:
                 pos_comp_pp_t.append(comp1)
                 pos_comp_pp_t_sig.append(sig)
+                pos_num.append(num_case)
             else:
                 neg_comp_pp_t.append(comp1)
                 neg_comp_pp_t_sig.append(sig)
+                neg_num.append(num_case)
         else:
             if 'pos' in c:
                 pos_comp_hgt750_200.append(comp1)
@@ -585,8 +593,8 @@ PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
-                      ocean_mask=False, num_cases=False,
-                      num_cases_data=None,
+                      ocean_mask=False, num_cases=True,
+                      num_cases_data=pos_num,
                       sig_points=pos_comp_pp_t_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
@@ -600,8 +608,8 @@ PlotFinalTwoVariables(data=neg_comp_pp_t_toplot, num_cols=3,
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
-                      ocean_mask=False, num_cases=False,
-                      num_cases_data=None,
+                      ocean_mask=False, num_cases=True,
+                      num_cases_data=neg_num,
                       sig_points=neg_comp_pp_t_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
@@ -616,8 +624,8 @@ PlotFinalTwoVariables(data=pos_comp_hgt750_200_toplot, num_cols=3,
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
-                      ocean_mask=False, num_cases=False,
-                      num_cases_data=None,
+                      ocean_mask=False, num_cases=True,
+                      num_cases_data=pos_num,
                       sig_points=pos_comp_hgt750_200_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
@@ -631,8 +639,8 @@ PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
-                      ocean_mask=False, num_cases=False,
-                      num_cases_data=None,
+                      ocean_mask=False, num_cases=True,
+                      num_cases_data=neg_num,
                       sig_points=neg_comp_hgt750_200_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
