@@ -2,7 +2,8 @@
 Correlacion entre N34 y prec y tref en CFSv2
 """
 # ---------------------------------------------------------------------------- #
-save = True
+save = False
+use_spearman = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 
 dates_dir = '/pikachu/datos/luciano.andrian/cases_dates/'
@@ -13,6 +14,8 @@ import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import xarray as xr
 from matplotlib import colors
+from scipy.stats import spearmanr
+import numpy as np
 
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
@@ -49,6 +52,29 @@ mintrose_divergent_13.set_under('#004D43')
 mintrose_divergent_13.set_over('#4C0035')
 mintrose_divergent_13.set_bad('white')
 
+# Funciones ------------------------------------------------------------------ #
+def spearman_correlation(da_field, da_series):
+
+    def spearman_func(x, y):
+        # Si hay valores NaN, se ignoran ambos pares
+        mask = np.isfinite(x) & np.isfinite(y)
+        if np.sum(mask) < 3: # se necesitan al menos 3 pares para  Spearman
+            return np.nan
+        return spearmanr(x[mask], y[mask])[0]
+
+    result = xr.apply_ufunc(
+        spearman_func,
+        da_field,
+        da_series,
+        input_core_dims=[["sample"], ["sample"]],
+        output_core_dims=[[]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+    )
+
+    return result
+
 # Correlation ---------------------------------------------------------------- #
 
 for i_name in ['N34', 'DMI']:
@@ -65,7 +91,15 @@ for i_name in ['N34', 'DMI']:
             var = var.sel(time=var.time.dt.year != 2011)
             indice = indice.sel(time=indice.time.dt.year != 2011)
 
-        corr.append(xr.corr(indice.sst, var[v], dim=['time', 'r']))
+        if use_spearman:
+            var_stacked = var[v].stack(sample=('r', 'time'))
+            indice_stacked = indice['sst'].stack(sample=('r', 'time'))
+
+            corr.append(spearman_correlation(
+                var_stacked.transpose('sample', 'lat', 'lon'),
+                indice_stacked.transpose('sample')))
+        else:
+            corr.append(xr.corr(indice.sst, var[v], dim=['time', 'r']))
 
     # Plot ------------------------------------------------------------------- #
     aux_v = SetDataToPlotFinal(corr[0], corr[1])

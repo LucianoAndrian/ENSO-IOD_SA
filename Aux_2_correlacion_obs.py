@@ -2,7 +2,7 @@
 Correlacion entre N34, dmi y prec y tref
 """
 # ---------------------------------------------------------------------------- #
-save = True
+save = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 
 variables_tpp = ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25']

@@ -13,6 +13,7 @@ save_nc = True
 variables = ['hgt', 'tref', 'prec']#, 'T0995sigma']
 variables = ['tref', 'prec']
 variables = ['hgt750']
+variables = ['sst']
 # Funciones ------------------------------------------------------------------ #
 def fix_calendar(ds, timevar='time'):
     """
