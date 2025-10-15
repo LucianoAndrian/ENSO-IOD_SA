@@ -5,6 +5,7 @@ Mapa de regiones
 ################################################################################
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 save = True
+name_fig='regiones_modificados'
 ################################################################################
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,9 +23,9 @@ if save:
 else:
     dpi = 100
 ################################################################################
-names_regiones_sa = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']#, 'Aux_20']
-lat_regiones_sa = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40,-30], [-56, -40]]#, [-25, -15]]
-lon_regiones_sa = [[291, 304], [311, 325], [303, 315], [296, 306], [285,293], [287, 295]]#, [305, 320]]
+names_regiones_sa = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Andes-C', 'Andes-S']
+lat_regiones_sa = [[-13, 2], [-15, 2], [-27, -15], [-39, -25], [-45,-30], [-56, -45]]
+lon_regiones_sa = [[291, 304], [311, 326], [306, 325], [296, 306], [285,293], [284, 290]]
 
 ################################################################################
 # Plot regiones SA ------------------------------------------------------------#
@@ -58,7 +59,7 @@ ax.set_extent(extent, crs=crs_latlon)
 ax.tick_params(labelsize=7)
 plt.tight_layout()
 if save:
-    plt.savefig(out_dir + 'mapa_regiones.pdf', dpi=dpi, bbox_inches='tight')
+    plt.savefig(f'{out_dir}{name_fig}.png', dpi=dpi, bbox_inches='tight')
 else:
     plt.show()
 ################################################################################

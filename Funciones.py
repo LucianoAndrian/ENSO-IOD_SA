@@ -3447,13 +3447,11 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
 
                 if plot_regiones is True:
                     names_regiones_sa = ['Am', 'NeB', 'N-SESA', 'S-SESA',
-                                         'Chile-Cuyo', 'Patagonia']
-                    lat_regiones_sa = [[-13, 2], [-15, 2], [-29, -17],
-                                       [-39, -25],
-                                       [-40, -30], [-56, -40]]
-                    lon_regiones_sa = [[291, 304], [311, 325], [303, 315],
-                                       [296, 306], [285, 293],
-                                       [287, 295]]
+                                         'Andes-C', 'Andes-S']
+                    lat_regiones_sa = [[-13, 2], [-15, 2], [-27, -15],
+                                       [-39, -25], [-45, -30], [-56, -45]]
+                    lon_regiones_sa = [[291, 304], [311, 326], [306, 325],
+                                       [296, 306], [285, 293], [284, 290]]
 
                     for r, rname in enumerate(names_regiones_sa):
                         w = lon_regiones_sa[r][1] - lon_regiones_sa[r][0]
