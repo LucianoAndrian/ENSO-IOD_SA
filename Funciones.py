@@ -3498,7 +3498,7 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                     ax.contour(data_ctn.lon.values[::plot_step],
                                data_ctn.lat.values[::plot_step],
                                aux_ctn_var[::plot_step,::plot_step],
-                               linewidths=0.4,
+                               linewidths=0.6,
                                levels=levels_ctn, transform=crs_latlon,
                                colors=color_ctn)
                 else:
@@ -4106,7 +4106,7 @@ def PlotFinalTwoVariables(data, num_cols,
 
                 ax.contour(data_ctn.lon.values[::step],
                            data_ctn.lat.values[::step],
-                           aux_ctn_var[::step, ::step], linewidths=0.4,
+                           aux_ctn_var[::step, ::step], linewidths=0.6,
                            levels=levels_ctn, transform=crs_latlon,
                            colors=color_ctn)
 
