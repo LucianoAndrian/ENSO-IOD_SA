@@ -294,8 +294,8 @@ cases = ['N34_un_pos', 'N34_un_neg', 'DMI_un_pos', 'DMI_un_neg',
 cases_cfsv2 =['n34_puros_pos', 'dmi_puros_pos', 'sim_pos',
               'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']
 
-title_case = ['Pure positive IOD ', 'Pure El Niño', 'El Niño - positive IOD',
-               'Pure negative IOD', 'Pure La Niña', 'La Niña - negative IOD']
+title_case = ['Pure positive IOD ', 'Pure El Niño', 'El Niño & positive IOD',
+               'Pure negative IOD', 'Pure La Niña', 'La Niña & negative IOD']
 
 # ---------------------------------------------------------------------------- #
 
@@ -575,12 +575,12 @@ pos_comp_hgt750_toplot = xr.concat(pos_comp_hgt750+pos_comp_hgt750, dim='plots')
 neg_comp_hgt750_toplot = xr.concat(neg_comp_hgt750+neg_comp_hgt750, dim='plots')
 
 
-title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño - pos. IOD',
-                   'Pure El Niño', 'Pure positive IOD', 'El Niño - pos. IOD']
+title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD',
+                   'Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD']
 
 
-title_neg_cases = ['Pure La Niña', 'Pure negative IOD', 'La Niña - neg. IOD',
-                   'Pure La Niña', 'Pure negative IOD', 'La Niña - neg. IOD']
+title_neg_cases = ['Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD',
+                   'Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD']
 
 plt.rcParams['hatch.linewidth'] = 1
 PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
@@ -801,11 +801,11 @@ neg_snr_hgt750_200_toplot = xr.concat(neg_snr_hgt750_200, dim='plots')
 pos_comp_hgt750_toplot = xr.concat(pos_comp_hgt750+pos_comp_hgt750, dim='plots')
 neg_comp_hgt750_toplot = xr.concat(neg_comp_hgt750+neg_comp_hgt750, dim='plots')
 
-title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño - pos. IOD',
-                   'Pure El Niño', 'Pure positive IOD', 'El Niño - pos. IOD']
+title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD',
+                   'Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD']
 
-title_neg_cases = ['Pure  La Niña', 'Pure negative IOD', 'La Niña - neg. IOD',
-                   'Pure La Niña', 'Pure negative IOD', 'La Niña - neg. IOD']
+title_neg_cases = ['Pure  La Niña', 'Pure negative IOD', 'La Niña & neg. IOD',
+                   'Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD']
 
 plt.rcParams['hatch.linewidth'] = 1
 PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
