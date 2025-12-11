@@ -117,3 +117,20 @@ def init_logger(log_name="app.log", level=logging.INFO):
     return logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------- #
+def ChangeLons(data, lon_name='lon'):
+    data['_longitude_adjusted'] = xr.where(
+        data[lon_name] < 0,
+        data[lon_name] + 360,
+        data[lon_name])
+
+    data = (
+        data
+            .swap_dims({lon_name: '_longitude_adjusted'})
+            .sel(**{'_longitude_adjusted': sorted(data._longitude_adjusted)})
+            .drop(lon_name))
+
+    data = data.rename({'_longitude_adjusted': 'lon'})
+
+    return data
+
+# ---------------------------------------------------------------------------- #

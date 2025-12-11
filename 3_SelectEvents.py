@@ -5,12 +5,20 @@ las salidas de 2_CFSv2_DMI_N34.py
 # ---------------------------------------------------------------------------- #
 import xarray as xr
 import numpy as np
+from funciones.general_utils import init_logger
+
+import warnings
+warnings.simplefilter("ignore")
+
 # ---------------------------------------------------------------------------- #
-save_nc = False
+save_nc = True
 out_dir = '/pikachu/datos/luciano.andrian/cases_dates/'
 
 dates_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
 dir_leads = '/datos/luciano.andrian/ncfiles/NMME_CFSv2/'
+# ---------------------------------------------------------------------------- #
+logger = init_logger('3_SelectEvents.log')
+
 ## Funciones ----------------------------------------------------------------- #
 def xrClassifierEvents(index, r, by_r=True):
     if by_r:
@@ -40,16 +48,14 @@ def ConcatEvent(xr_original, xr_to_concat, dim='time'):
     return xr_concat
 
 # ---------------------------------------------------------------------------- #
-# seasons = ['JJA', 'JAS', 'ASO', 'SON']
-# main_month_season = [7, 8, 9, 10]
-
 seasons = ['SON']
 main_month_season = [10]
 
 for ms, s in zip(main_month_season, seasons):
-    print(f'{s} - main month: {ms}')
-    n34_season = xr.open_dataset(dates_dir + 'N34_' + s + '_Leads_r_CFSv2.nc')
-    dmi_season = xr.open_dataset(dates_dir + 'DMI_' + s + '_Leads_r_CFSv2.nc')
+    logger.info(f'{s} - main month: {ms}')
+
+    n34_season = xr.open_dataset(f'{dates_dir}N34_{s}_Leads_r_CFSv2_new.nc')
+    dmi_season = xr.open_dataset(f'{dates_dir}DMI_{s}_Leads_r_CFSv2_new.nc')
 
     # Criterio Niño3.4 - umbral ONI
     data_n34 = n34_season.where(
@@ -70,6 +76,7 @@ for ms, s in zip(main_month_season, seasons):
     """
     check_dmi_pos_n34_neg = 666
     check_dmi_neg_n34_pos = 666
+    logger.info('r loop...')
     for r in range(1, 25):
         # Clasificados en positivos y negativos
         dmi_pos, dmi_neg, dmi = xrClassifierEvents(data_dmi, r)
@@ -86,10 +93,10 @@ for ms, s in zip(main_month_season, seasons):
         n34_sim = n34.sel(time=n34.time.isin(sim_events))
 
         # Clasificando los simultaneos
-        dmi_sim_pos, dmi_sim_neg = xrClassifierEvents(dmi_sim, r=666,
-                                                      by_r=False)
-        n34_sim_pos, n34_sim_neg = xrClassifierEvents(n34_sim, r=666,
-                                                      by_r=False)
+        dmi_sim_pos, dmi_sim_neg = xrClassifierEvents(
+            dmi_sim, r=666, by_r=False)
+        n34_sim_pos, n34_sim_neg = xrClassifierEvents(
+            n34_sim, r=666, by_r=False)
 
         sim_pos = np.intersect1d(dmi_sim_pos, n34_sim_pos)
         sim_pos = dmi_sim_pos.sel(time=dmi_sim_pos.time.isin(sim_pos))
@@ -192,7 +199,7 @@ for ms, s in zip(main_month_season, seasons):
             dmi_pos_n34_neg_f = ConcatEvent(dmi_pos_n34_neg_f, dmi_pos_n34_neg)
 
     if save_nc is True:
-        print('Saving...')
+        logger.info('Saving...')
         dmi_puros_pos_f.to_netcdf(
             out_dir + 'dmi_puros_pos_f' + '_' + s + '_05.nc')
         dmi_puros_neg_f.to_netcdf(
@@ -221,7 +228,7 @@ for ms, s in zip(main_month_season, seasons):
             dmi_pos_n34_neg_f.to_netcdf(
                 out_dir + 'dmi_pos_n34_neg_f' + '_' + s + '_05.nc')
 
-print('# --------------------------------------------------------------------#')
-print('# --------------------------------------------------------------------#')
-print('done')
-print('# --------------------------------------------------------------------#')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

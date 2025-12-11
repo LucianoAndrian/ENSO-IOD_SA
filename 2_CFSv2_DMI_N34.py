@@ -11,7 +11,7 @@ warnings.simplefilter("ignore")
 # ---------------------------------------------------------------------------- #
 case_field_dir = '/pikachu/datos/luciano.andrian/cases_fields/'
 out_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
-save_nc = False
+save_nc = True
 
 # ---------------------------------------------------------------------------- #
 logger = init_logger('2_CFSv2_DMI_N34.log')

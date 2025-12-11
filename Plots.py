@@ -2,7 +2,7 @@
 Figuras ENSO-IOD-SA
 """
 # ---------------------------------------------------------------------------- #
-save = True
+save = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 plot_bins = False
 plot_bins_2d = False
