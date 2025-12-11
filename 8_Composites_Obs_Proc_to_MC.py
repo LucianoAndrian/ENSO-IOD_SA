@@ -9,13 +9,19 @@ out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
 import xarray as xr
 import pandas as pd
 pd.options.mode.chained_assignment = None
-import os
+from funciones.indices_utils import Nino34CPC, DMI
+from funciones.composite_utils import MultipleComposite
+from funciones.general_utils import init_logger
+
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
-from Funciones import Nino34CPC, DMI, MultipleComposite
+
 # ---------------------------------------------------------------------------- #
 w_dir = '/home/luciano.andrian/doc/salidas/'
 pwd = '/datos/luciano.andrian/ncfiles/'
+# ---------------------------------------------------------------------------- #
+logger = init_logger('8_Composites_Obs_Proc_to_MC.log')
+
 # ---------------------------------------------------------------------------- #
 seasons = [10]
 seasons_name = ['SON']
@@ -26,7 +32,7 @@ fs = False
 start = 1920 # *no afecta al computo con 1940
 end = 2020
 
-print(' DMI y N34 ---------------------------------------------------------- #')
+logger.info('DMI y N34')
 dmi, aux, dmi_aux = DMI(filter_bwa=False, start_per=start, end_per=end)
 del aux
 aux = xr.open_dataset(
@@ -35,9 +41,9 @@ n34 = Nino34CPC(aux, start=start, end=end)[2]
 del aux
 
 
-print(' Composite ---------------------------------------------------------- #')
+logger.info('Composite')
 for s_count, s in enumerate(seasons):
-    print(seasons_name[s_count])
+    logger.info(f'seasons_name[s_count]')
 
     Neutral, DMI_sim_pos, DMI_sim_neg, DMI_un_pos, DMI_un_neg, N34_un_pos, \
         N34_un_neg, DMI_pos, DMI_neg, N34_pos, N34_neg, DMI_pos_N34_neg, \
@@ -66,10 +72,10 @@ for s_count, s in enumerate(seasons):
     )
 
     if save is True:
-        print('Saving...')
+        logger.info('Saving...')
         ds.to_netcdf(f'{out_dir}{start}_{end}_{seasons_name[s_count]}.nc')
 
-print('# ------------------------------------------------------------------- #')
-print('# ------------------------------------------------------------------- #')
-print('done')
-print('# ------------------------------------------------------------------- #')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

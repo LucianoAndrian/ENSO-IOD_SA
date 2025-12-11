@@ -2,10 +2,8 @@
 Figuras ENSO-IOD-SA
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
-plot_bins = False
-plot_bins_2d = False
 plot_pdf = False
 # ---------------------------------------------------------------------------- #
 import os
@@ -23,30 +21,21 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from Funciones import SetDataToPlotFinal, PlotFinal, CaseComp, RenameDataset, \
-    BinsByCases, PlotFinal_CompositeByMagnitude, PDF_cases, PlotPdfs, \
-    SelectBins2D, SelectDatesBins, PlotBars, MakeMask, PlotBins2D, \
-    SetBinsByCases, AreaBetween, PlotPDFTable, PlotFinalTwoVariables, \
-    PlotBins2DTwoVariables
+from funciones.composite_utils import CaseComp
+from funciones.general_utils import RenameDataset, MakeMask, AreaBetween, \
+    PDF_cases, init_logger, MakerMaskSig, Weights
+from funciones.plot_utils import SetDataToPlotFinal, PlotFinal, \
+    PlotFinal_CompositeByMagnitude, PlotPdfs, PlotBars, PlotPDFTable, \
+    PlotFinalTwoVariables, PlotBins2DTwoVariables
+from funciones.binsbycases_utils import SelectBins2D, SelectDatesBins, SetBinsByCases, BinsByCases
+# ---------------------------------------------------------------------------- #
+logger = init_logger('Plots.log')
 
 # ---------------------------------------------------------------------------- #
 if save:
     dpi = 300
 else:
     dpi = 100
-
-# ---------------------------------------------------------------------------- #
-def MakerMaskSig(data, r_crit):
-    mask_sig = data.where((data < -1 * r_crit) | (data > r_crit))
-    mask_sig = mask_sig.where(np.isnan(mask_sig), 1)
-
-    return mask_sig
-
-def Weights(data):
-    weights = np.transpose(np.tile(np.cos(data.lat * np.pi / 180),
-                                   (len(data.lon), 1)))
-    data_w = data * weights
-    return data_w
 
 # ---------------------------------------------------------------------------- #
 data_dir_proc = '/pikachu/datos/luciano.andrian/paper2/salidas_nc/'
@@ -63,9 +52,10 @@ data_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1940_2020/'
 
 cases_dir = "/pikachu/datos/luciano.andrian/cases_fields/"
 dates_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
+
 # Funciones ------------------------------------------------------------------ #
-def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
-                                      'observado/ncfiles/data_obs_d_w_c/'):
+def OpenObsDataSet(name, sa=True,
+                   dir='/pikachu/datos/luciano.andrian/observado/ncfiles/data_obs_d_w_c/'):
 
     aux = xr.open_dataset(dir + name + '.nc')
 
@@ -78,7 +68,6 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
             return aux2
     else:
         return aux
-
 
 def OpenAndSetRegre(v, data_dir_proc=data_dir_proc):
     print(
@@ -298,18 +287,19 @@ title_case = ['Pure positive IOD ', 'Pure El Niño', 'El Niño & positive IOD',
                'Pure negative IOD', 'Pure La Niña', 'La Niña & negative IOD']
 
 # ---------------------------------------------------------------------------- #
+logger.info('# Validation #')
 
-print('# Validation -------------------------------------------------------- #')
 variables = ['prec', 'tref']
 aux_scales = [scale_pp_val, scale_t_val]
 aux_cbar = [cbar_pp, cbar, cbar, cbar]
 for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
-    print('Climatology ------------------------------------------------------ ')
+    logger.info('Climatology')
     clim_dif = xr.open_dataset(f'{data_dir_proc}{v}_dif_clim_no-norm.nc')
     clim_dif_test = xr.open_dataset(
         f'{data_dir_proc}{v}_pvalue_clim_no-norm.nc')
 
-    print('Events ----------------------------------------------------------- ')
+    logger.info('Events')
+    logger.info('CFSv2')
     # CFSv2
     enso_cfsv2_dif_test =  xr.open_dataset(
         f'{data_dir_proc}{v}_enso_cfsv2_test.nc')
@@ -319,12 +309,14 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
     iod_cfsv2_dif = xr.open_dataset(f'{data_dir_proc}{v}_iod_cfsv2_dif.nc')
 
     # Obs
+    logger.info('Obs')
     enso_obs_dif_test = xr.open_dataset(f'{data_dir_proc}{v}_enso_obs_test.nc')
     enso_obs_dif = xr.open_dataset(f'{data_dir_proc}{v}_enso_obs_dif.nc')
 
     iod_obs_dif_test = xr.open_dataset(f'{data_dir_proc}{v}_iod_obs_test.nc')
     iod_obs_dif = xr.open_dataset(f'{data_dir_proc}{v}_iod_obs_dif.nc')
 
+    logger.info('Plot...')
     clim_dif, clim_dif_test, enso_cfsv2_dif_test, enso_cfsv2_dif, \
         iod_cfsv2_dif_test, iod_cfsv2_dif, enso_obs_dif_test, enso_obs_dif, \
         iod_obs_dif_test, iod_obs_dif = \
@@ -352,6 +344,7 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
               color_ctn2=None, high=3, width=7, num_cols=3, pdf=True,
               sig_points=aux_sig, hatches='...', ocean_mask=True)
 
+    logger.info('Obs dif - CFSv2 dif')
     # Diferencia OBS dif -CFSv2 dif
     enso_obs_dif_interp = enso_obs_dif.interp(lon=enso_cfsv2_dif.lon.values,
                                               lat=enso_cfsv2_dif.lat.values)
@@ -370,16 +363,15 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
               color_ctn2=None, high=3.5, width=5, num_cols=2, pdf=True,
               sig_points=None, hatches='...', ocean_mask=True)
 
-print('Done Validation ------------------------------------------------------ ')
-print(' --------------------------------------------------------------------- ')
-print('                                                                       ')
 # ---------------------------------------------------------------------------- #
+logger.info('Done Validation ')
 
-print('# Regresion --------------------------------------------------------- #')
+# ---------------------------------------------------------------------------- #
+logger.info('# Regresion #')
 t_critic = 1.66  # es MUY similar (2 digitos) para ambos períodos
 r_crit = np.sqrt(1 / (((np.sqrt((p[1] - p[0]) - 2) / t_critic) ** 2) + 1))
 
-
+logger.info('Open data')
 regre_n34_prec, regre_corr_n34_prec, regre_dmi_prec, regre_corr_dmi_prec, \
         regre_n34_wodmi_prec, regre_corr_n34_wodmi_prec, regre_dmi_won34_prec, \
         regre_corr_dmi_won34_prec = OpenAndSetRegre('prec')
@@ -388,6 +380,7 @@ regre_n34_temp, regre_corr_n34_temp, regre_dmi_temp, regre_corr_dmi_temp, \
         regre_n34_wodmi_temp, regre_corr_n34_wodmi_temp, regre_dmi_won34_temp, \
         regre_corr_dmi_won34_temp = OpenAndSetRegre('temp')
 
+logger.info('Plot...')
 aux_sig = SetDataToPlotFinal(
     regre_n34_prec * MakerMaskSig(regre_corr_n34_prec, r_crit),
     regre_n34_wodmi_prec * MakerMaskSig(regre_corr_n34_wodmi_prec, r_crit),
@@ -471,11 +464,12 @@ PlotFinalTwoVariables(data=aux_hgt750_200, num_cols=4,
                       sig_points=aux_sig_hgt750_200, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
-print('Done Regression ------------------------------------------------------ ')
-print(' --------------------------------------------------------------------- ')
-print('                                                                       ')
+# ---------------------------------------------------------------------------- #
+logger.info('Done Regression')
 
-print('# Obs. Composite ---------------------------------------------------- #')
+# ---------------------------------------------------------------------------- #
+
+logger.info('# Obs. Composite #')
 pos_comp_pp_t=[]
 neg_comp_pp_t=[]
 pos_comp_hgt750_200=[]
@@ -491,7 +485,7 @@ neg_comp_hgt750=[]
 pos_num=[]
 neg_num=[]
 for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
-    print(v)
+    logger.info(f'Variable {v}')
     if v != 'HGT200' and v != 'HGT750':
         print('using Opendataset')
         data = OpenObsDataSet(name=v + '_SON', sa=False)
@@ -503,10 +497,10 @@ for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
         data = xr.open_dataset(f'{data_dir}{v}_SON_mer_d_w.nc')
         data = data.sel(lon=slice(275, 330), lat=slice(20, -65))
 
-
     # Cases ------------------------------------------------------------------ #
     aux_num_cases = []
     for c in cases:
+        logger.info(f'Cases {c}')
         if v != 'HGT200' and v != 'HGT750':
             print('using Opendataset')
             data_sig = xr.open_dataset(sig_dir + v.split('_')[0] + '_' + c +
@@ -558,7 +552,7 @@ for v in ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25', 'HGT750', 'HGT200']:
             else:
                 neg_comp_hgt750.append(comp1)
 
-
+logger.info('Plots...')
 pos_comp_pp_t_toplot = xr.concat(pos_comp_pp_t, dim='plots')
 pos_comp_pp_t_sig_toplot = xr.concat(pos_comp_pp_t_sig, dim='plots')
 
@@ -644,12 +638,11 @@ PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
                       sig_points=neg_comp_hgt750_200_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=False)
 
-print('Done Obs. Composite -------------------------------------------------- ')
-print(' --------------------------------------------------------------------- ')
-print('                                                                       ')
+# ---------------------------------------------------------------------------- #
+logger.info('Done Obs. Composite')
 
 # ---------------------------------------------------------------------------- #
-print('# CFSv2 Composite --------------------------------------------------- #')
+logger.info('# CFSv2 Composite #')
 aux_scale_hgt = [-100, -50, -30, -15, -5, 5, 15, 30, 50, 100]
 aux_scale_hgt200 = [-150, -100, -50, -25, -10, 10, 25, 50, 100, 150]
 
@@ -681,6 +674,7 @@ neg_snr_hgt750=[]
 pos_num = []
 neg_num = []
 for v in variables:
+    logger.info(f'Variables {v}')
 
     if v == 'prec':
         fix = 30
@@ -714,6 +708,7 @@ for v in variables:
 
     aux_num_cases = []
     for c in cases_cfsv2:
+        logger.info(f'Cases {c}')
         case = xr.open_dataset(f'{cases_dir}{v}_{c}_SON{end_name_file}.nc')
         case = case.rename({list(case.data_vars)[0]: 'var'})
         case = case * fix
@@ -727,7 +722,6 @@ for v in variables:
         except:
             case_sig = xr.open_dataset(
                 f'{cfsv2_sig_dir}{v}_QT_{c}_CFSv2_detrend_05.nc') * fix
-
 
         sig = comp.where((comp < case_sig[v_in_name][0]) |
                          (comp > case_sig[v_in_name][1]))
@@ -750,7 +744,6 @@ for v in variables:
             sig = sig.drop('P')
         except:
             pass
-
 
         if v != 'hgt' and v != 'hgt750':
             if 'pos' in c:
@@ -782,6 +775,7 @@ for v in variables:
                 neg_snr_hgt750.append(snr)
 
 
+logger.info('Plots...')
 pos_comp_pp_t_toplot = xr.concat(pos_comp_pp_t, dim='plots')
 pos_comp_pp_t_sig_toplot = xr.concat(pos_comp_pp_t_sig, dim='plots')
 pos_snr_pp_t_toplot = xr.concat(pos_snr_pp_t, dim='plots')
@@ -898,12 +892,13 @@ PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
                       sig_points=neg_comp_hgt750_200_sig_toplot, hatches='...',
                       data_ctn_no_ocean_mask=True)
 
-print('Done CFSv2 Composite ------------------------------------------------- ')
-print(' --------------------------------------------------------------------- ')
+# ---------------------------------------------------------------------------- #
+logger.info('Done CFSv2 Composite')
 
 # ---------------------------------------------------------------------------- #
-print('# CFSv2 Composite by magnitude -------------------------------------- #')
-print('Set -----------------------------------------------------------------')
+
+logger.info('# CFSv2 Composite by magnitude #')
+logger.info('Set')
 cases = ['dmi_puros_pos', 'dmi_puros_neg',
         'n34_puros_pos', 'n34_puros_neg',
         'sim_pos', 'sim_neg',
@@ -942,11 +937,12 @@ aux_scales_clim = [np.linspace(0,30,11), np.linspace(0, 300, 11),
                    np.linspace(1.1e5,1.2e5,11), np.linspace(1.1e5,1.2e5,11)]
 aux_cbar_clim = ['OrRd', 'PuBu', 'OrRd', 'OrRd']
 
-print('Plot ----------------------------------------------------------------- ')
+logger.info('Compute and Plot')
 for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         variables, aux_scales, aux_cbar, aux_scales_clim, aux_cbar_clim,
         aux_cbar_snr):
-    print(v)
+
+    logger.info(f'Variable {v}')
 
     if v == 'prec':
         fix = 30
@@ -982,9 +978,10 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     n_count_snr = 0
 
     for c_count, c in enumerate(cases):
+        logger.info(f'Case {c}')
 
         # BinsByCases -------------------------------------------------------- #
-        print('comp --------------------------------------------------------- ')
+        logger.info('Comp...')
         cases_bin, num_bin, auxx = BinsByCases(
             v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
             c_count=c_count,
@@ -1003,7 +1000,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                 aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][b_n34]
                 n_count += 1
 
-        print('snr ---------------------------------------------------------- ')
+        logger.info('SNR...')
         cases_bin_snr, num_bin_snr, auxx_snr = BinsByCases(
             v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
             c_count=c_count,
@@ -1057,8 +1054,9 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
 
     lat = np.arange(-60, 20 + 1)
     lon = np.arange(275, 330 + 1)
-
+    logger.info('Cases Done')
     # Clim ------------------------------------------------------------------- #
+    logger.info('Clim...')
     if check_t_pp is True:
         clim = xr.open_dataset(f'/pikachu/datos/luciano.andrian/'
                                f'val_clim_cfsv2/hindcast_{v}_cfsv2_'
@@ -1075,6 +1073,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
     clim_hgt = clim_hgt.sel(lon=lon, lat=lat)
 
     # ordenando por categorias ----------------------------------------------- #
+    logger.info('Ordenando por categorias')
     cases_ordenados = []
     cases_ordenados_sig = []
     cases_ordenados_hgt = []
@@ -1167,6 +1166,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         cases_ordenados_snr.append(da_snr)
         cases_ordenados_sig.append(da_sig)
 
+    logger.info('Plots...')
     cases_ordenados = xr.concat(cases_ordenados, dim='plots')
     cases_ordenados_snr = xr.concat(cases_ordenados_snr, dim='plots')
     cases_ordenados_sig = xr.concat(cases_ordenados_sig, dim='plots')
@@ -1227,11 +1227,12 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    cbar_pos='V',
                                    plot_regiones=False)
 
-print('Done CFSv2 Composite by magnitude ------------------------------------ ')
-print(' --------------------------------------------------------------------- ')
+# ---------------------------------------------------------------------------- #
+logger.info('Done CFSv2 Composite by magnitude')
 
 # ---------------------------------------------------------------------------- #
-print(' PDFs CFSv2 ---------------------------------------------------------- ')
+logger.info('# PDFs CFSv2 #')
+
 box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'C-Andes', 'S-Andes']
 box_lats = [[-13, 2], [-15, 2], [-27, -15], [-39, -25], [-45,-30], [-56, -45]]
 box_lons = [[291, 304], [311, 326], [306, 325], [296, 306], [285,293], [284, 290]]
@@ -1244,19 +1245,20 @@ cases = ['dmi_puros_pos', 'dmi_puros_neg', #DMI puros
          'dmi_neg_n34_pos', 'dmi_pos_n34_neg']
 
 for v, v_cbar in zip(['tref', 'prec'], [cbar_bins2d, cbar_pp_bins2d]):
-
+    logger.info(f'Variable {v}')
     result = PDF_cases(variable=v, season='SON',
                        box_lons=box_lons, box_lats=box_lats, box_name=box_name,
                        cases=cases, cases_dir=cases_dir)
 
     regiones_areas = {}
     for k in result.keys():
+        logger.info(f'Regiones {k}')
         aux = result[k]
 
         areas = {}
         for c in ['n34_puros_pos', 'dmi_puros_pos', 'sim_pos',
                   'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']:
-
+            logger.info(f'Case {c}')
             areas[c] = AreaBetween(aux['clim'], aux[c])
 
         regiones_areas[k] = areas
@@ -1264,6 +1266,8 @@ for v, v_cbar in zip(['tref', 'prec'], [cbar_bins2d, cbar_pp_bins2d]):
     df = pd.DataFrame(regiones_areas)
     df.to_csv(f'{out_dir}area_entre_pdfs_{v}.csv')
     df.index = ['EN', 'IODp', 'EN-IODp', 'LN', 'IODn', 'LN-IODn']
+
+    logger.info(f'Plot Table...')
     PlotPDFTable(np.round(df.transpose(), 2), cmap=v_cbar,
                  levels=[-1, -0.8, -0.6, -0.4, -0.2, -0.1,
                          0, 0.1, 0.2, 0.4, 0.6, 0.8, 1],
@@ -1275,236 +1279,18 @@ for v, v_cbar in zip(['tref', 'prec'], [cbar_bins2d, cbar_pp_bins2d]):
     selected_cases = [['clim', 'n34_puros_pos', 'dmi_puros_pos', 'sim_pos'],
                       ['clim', 'n34_puros_neg', 'dmi_puros_neg', 'sim_neg']]
     if plot_pdf:
+        logger.info(f'Plot PDF...')
         for k in result.keys():
             PlotPdfs(data=result[k], selected_cases=selected_cases,
                      width=10, high=2.5, title=f'{v} - {k}',
                      namefig=f'PDF_{v}_{k}',
                      out_dir=out_dir, save=save, dpi=dpi)
     else:
-        print('PDF compute, no plot')
-
-print('Done CFSv2 PDFs ------------------------------------------------------ ')
-print(' --------------------------------------------------------------------- ')
-
-print(' Bins ---------------------------------------------------------------- ')
-if plot_bins:
-    bar_n_color = '#C685D1'
-    bar_n_error_color = '#C685D1'
-    bar_d_color = '#EDC45D'
-    bar_d_error_color = '#EDC45D'
-    s = 'SON'
-    bins_limits = np.arange(-3.25, 3.25 + 0.5, 0.5)
-    x = np.linspace(round(min(bins_limits)), round(max(bins_limits)),
-                    len(bins_limits) - 1)
-
-    # indices
-    data_dmi = xr.open_dataset(dates_dir + 'DMI_' + s + '_Leads_r_CFSv2.nc')
-    data_n34 = xr.open_dataset(dates_dir + 'N34_' + s + '_Leads_r_CFSv2.nc')
-
-    # normalizando por sd
-    data_dmi = (data_dmi - data_dmi.mean(['time', 'r'])) / \
-               data_dmi.std(['time', 'r'])
-    data_n34 = (data_n34 - data_n34.mean(['time', 'r'])) / \
-               data_n34.std(['time', 'r'])
-
-    box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Andes-C', 'Andes-S']
-    box_lats = [[-13, 2], [-15, 2], [-27, -15], [-39, -25], [-45, -30],
-                [-56, -45]]
-    box_lons = [[291, 304], [311, 326], [306, 325], [296, 306], [285, 293],
-                [284, 290]]
-
-    for v in ['tref', 'prec']:
-        print(v)
-        if v == 'prec':
-            fix = 30
-            fix_clim = 0
-            ylabel = 'prec anomaly [mm/month]'
-            ymin = -80
-            ymax = 40
-            remove_2011 = False
-        else:
-            fix = 1
-            fix_clim = 273
-            ylabel = 'tref anomaly [ºC/month]'
-            ymin = -2
-            ymax = 1
-            remove_2011 = False  # parche provisorio, hay algo mal en tref con 2011
-
-        data = xr.open_dataset(f'{cases_dir}{v}_{s.lower()}_detrend.nc')
-        data *= fix
-        data = data - data.mean(['time', 'r'])  # anom
-        mask = MakeMask(data, list(data.data_vars)[0])  # mask
-        data *= mask
-        if remove_2011:
-            print('PARCHE, arreglar!')
-            print('Removing 2011 data from data')
-            data = data.sel(time=data.time.dt.year != 2011)
-
-        bins_dmi = SelectBins2D(serie=data_dmi,
-                                bins_limits=bins_limits)
-
-        bins_n34 = SelectBins2D(serie=data_n34,
-                                bins_limits=bins_limits)
-
-        for bn, bl, bt in zip(box_name, box_lons, box_lats):
-            region = data.sel(lat=slice(min(bt), max(bt)),
-                              lon=slice(bl[0], bl[1]))
-            region = region.mean(['lon', 'lat'])
-
-            bins_n34_mean, bins_n34_std, bins_n34_len = \
-                SelectDatesBins(bins=bins_n34, bin_data=region,
-                                min_percentage=0.02)
-            bins_dmi_mean, bins_dmi_std, bins_dmi_len = \
-                SelectDatesBins(bins=bins_dmi, bin_data=region,
-                                min_percentage=0.02)
-
-            PlotBars(x, bins_n34_mean, bins_n34_std, bins_n34_len,
-                     bins_dmi_mean, bins_dmi_std, bins_dmi_len,
-                     title=f'{bn} - {v} anomaly \n (no se muestran <2% de casos)',
-                     name_fig=f'bins_{bn}-{v}', out_dir=out_dir, save=save,
-                     ymin=ymin, ymax=ymax, ylabel=ylabel, dpi=dpi,
-                     bar_n_color=bar_n_color,
-                     bar_n_error_color=bar_n_error_color,
-                     bar_d_color=bar_d_color,
-                     bar_d_error_color=bar_d_error_color)
-else:
-    print('Bins no plot')
-
-print(' Done Bins ----------------------------------------------------------- ')
-print(' --------------------------------------------------------------------- ')
+        logger.info(f'PDF compute, no plot')
 
 # ---------------------------------------------------------------------------- #
-print(' Bins 2D ------------------------------------------------------------- ')
+logger.info('Done CFSv2 PDFs')
 
-if plot_bins_2d:
-    cases = ['dmi_puros_pos', 'dmi_puros_neg',
-             'n34_puros_pos', 'n34_puros_neg',
-             'sim_pos', 'sim_neg',
-             #'dmi_neg_n34_pos', 'dmi_pos_n34_neg',
-             'neutros']
-
-    indices = ['n34', 'dmi']
-    magnitudes = ['s', 'm']
-    bin_limits = [[-4.5, -1],  # 0 s
-                  [-1, -0.5],  # 1 m
-                  [-0.5, 0.5],  # 2 -
-                  [0.5, 1],  # 3  m
-                  [1, 4.5]]  # 4 s
-
-    cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
-        SetBinsByCases(indices, magnitudes, bin_limits, cases)
-
-    print(
-        'Plot ----------------------------------------------------------------- ')
-    # box_name = ['Am', 'NeB', 'N-SESA', 'S-SESA', 'Chile-Cuyo', 'Patagonia']
-    # box_lats = [[-13, 2], [-15, 2], [-29, -17], [-39, -25], [-40, -30],
-    #             [-53, -37]]
-    # box_lons = [[291, 304], [311, 325], [303, 315], [296, 306], [285, 293],
-    #             [287, 294]]
-
-    title = ['Am', 'N-SESA', 'Patagonia', '', '', '']
-    box_name = ['Am', 'N-SESA', 'Patagonia']
-    box_lats = [[-13, 2], [-27, -15], [-53, -37]]
-    box_lons = [[291, 304], [306, 325], [287, 294]]
-
-    t_scale = [-0.75, -0.625, -0.5, -0.375, -0.25, -0.1, 0,
-               0.1, 0.25, 0.375, 0.5, 0.625, 0.75 ]
-    pp_scale = [-15.0, -12.5, -10.0, -7.5, -5.0, -1, 0.0,
-               1, 5.0, 7.5, 10.0, 12.5, 15.0]
-
-    cases_ordenados_f = []
-    num_ordenados_f = []
-    for v, v_scale, v_cbar in zip(['prec', 'tref'], [pp_scale, t_scale],
-                                  [cbar_pp_bins2d, cbar_bins2d]):
-
-        if v == 'prec':
-            fix = 30
-            fix_clim = 0
-            color_thr = 8
-            units = '[mm/month]'
-        else:
-            fix = 1
-            fix_clim = 273
-            color_thr = 1
-            units = '[ºC]'
-
-        for bt, bl, bn in zip(box_lats, box_lons, box_name):
-            aux_comps = {}
-            aux_num_comps = {}
-            n_count = 0
-
-            for c_count, c in enumerate(cases):
-                print(
-                    'comp ----------------------------------------------------- ')
-                cases_bin, num_bin, auxx = BinsByCases(
-                    v=v, v_name=v, fix_factor=fix, s='SON', mm=10, c=c,
-                    c_count=c_count,
-                    bin_limits=bin_limits,
-                    bins_by_cases_dmi=bins_by_cases_dmi,
-                    bins_by_cases_n34=bins_by_cases_n34,
-                    snr=False, cases_dir=cases_dir, dates_dir=dates_dir,
-                    neutro_clim=True, box=True, box_lat=bt, box_lon=bl,
-                    ocean_mask=True)
-
-                bins_aux_dmi = bins_by_cases_dmi[c_count]
-                bins_aux_n34 = bins_by_cases_n34[c_count]
-
-                for b_n34 in range(0, len(bins_aux_n34)):
-                    for b_dmi in range(0, len(bins_aux_dmi)):
-                        aux_comps[cases_names[n_count]] = cases_bin[b_dmi][
-                            b_n34]
-                        aux_num_comps[cases_names[n_count]] = num_bin[b_dmi][
-                            b_n34]
-                        n_count += 1
-
-            aux_num = []
-            cases_ordenados = []
-            num_ordenados = []
-            for c in cases_magnitude:
-                try:
-                    aux = aux_comps[c]
-                    aux_num.append(aux_num_comps[c])
-                except:
-                    aux = aux_comps[cases_magnitude[4]] * 0
-                    aux_num.append(np.nan)
-
-                da = xr.DataArray(aux, name="var")
-                cases_ordenados.append(da)
-
-            cases_ordenados = np.array(cases_ordenados). \
-                reshape(len(bin_limits), len(bin_limits))
-            num_ordenados = np.array(aux_num). \
-                reshape(len(bin_limits), len(bin_limits))
-
-            cases_ordenados_f.append(cases_ordenados)
-            num_ordenados_f.append(num_ordenados)
-
-
-    cases_ordenados_f[-4] = None
-    PlotBins2DTwoVariables(data_bins=cases_ordenados_f,
-                           num_bins=num_ordenados_f,
-                           bin_limits=bin_limits, num_cols=3,
-                           variable_v2='Temp.', variable_v1='Precip.',
-                           levels_v2=t_scale, cmap_v2=cbar_bins2d,
-                           levels_v1=pp_scale, cmap_v1=cbar_pp_bins2d,
-                           color_thr_v2=1, color_thr_v1=7,
-                           title=title,
-                           save=save, name_fig='figure11',
-                           out_dir=out_dir, dpi=dpi, high=3.5, width=11,
-                           pdf=True)
-
-    # PlotBins2D(cases_ordenados, num_ordenados,
-    #            levels=v_scale, cmap=v_cbar,
-    #            color_thr=color_thr,
-    #            title=f'{v} {units} - {bn}',
-    #            save=save, name_fig=f'{v}_bins2d_{bn}',
-    #            out_dir=out_dir, dpi=dpi,
-    #            bin_limits=bin_limits)
-
-
-else:
-    print('Bins 2D no plot')
-
-print(' Done Bins 2D -------------------------------------------------------- ')
-print(' --------------------------------------------------------------------- ')
-################################################################################
+logger.info('-----------------------------------------------------------------')
+logger.info('Plots Done')
+logger.info('-----------------------------------------------------------------')

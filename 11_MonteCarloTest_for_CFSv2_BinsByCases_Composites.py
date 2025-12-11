@@ -3,7 +3,7 @@ Igual 10_MonteCarloTest_for_CFSv2_BinsByCases_Composites.py
 pero para BinsByCases
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
            'CFSv2_nc_quantiles/')
 
@@ -18,67 +18,22 @@ import xarray as xr
 import numpy as np
 import os
 import glob
-import math
 from datetime import datetime
+from funciones.montecarlo_utils import NumberPerts, CompositesSimple_CFSv2
+from funciones.binsbycases_utils import SetBinsByCases, BinsByCases_noComp
+from funciones.general_utils import init_logger
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 import gc
 import multiprocessing as mp
-from Funciones import SetBinsByCases, BinsByCases_noComp
+
+# ---------------------------------------------------------------------------- #
+logger = init_logger('11_MonteCarloTest_for_BinsByCases_Composite.log')
+
 
 # ---------------------------------------------------------------------------- #
 dir_events = '/pikachu/datos/luciano.andrian/cases_fields/'
 
 # Functions ------------------------------------------------------------------ #
-def CompositesSimple_CFSv2(data, index):
-
-    index_array = np.array(index)
-    if len(index_array) != len(np.unique(index_array)):
-        raise ValueError("Valores duplicados en index")
-
-    data_sel = data.sel(position=index_array, drop=True)
-    data_sel = data_sel.mean('position')
-
-    return data_sel
-
-def NumberPerts(data_to_concat, neutro, num = 0):
-    #si las permutaciones posibles:
-    # > 10000 --> permutaciones = 10000
-    # < 1000 ---> permutaciones = todas las posibles
-    #
-    # si num != 0 permutaciones = num
-
-    total = len(data_to_concat.position) + len(neutro.position)
-    len1 = len(neutro.position)
-    len2 = len(data_to_concat.position)
-
-    try:
-        total_perts = math.factorial(total) / (math.factorial(len2) * \
-                                           math.factorial(len1))
-    except OverflowError:
-        total_perts = 10000
-
-    if num == 0:
-        if total_perts >= 10000:
-            tot = 10000
-            print('M = 10000')
-        else:
-            tot = total_perts
-            print('M = ' + str(total_perts))
-
-    else:
-        tot = num
-
-    jump = 9 #10 por .nc que guarde
-    M = []
-    n = 0
-
-    while n < tot:
-        aux = list(np.linspace((0 + n), (n + jump), (jump + 1)))
-        M.append(aux)
-        n = n + jump + 1
-
-    return M
-
 def SetXr_fromBinsByCases(base, data_to_set, v_name):
 
     event = data_to_set.dropna(dim='time', how='all')
@@ -108,7 +63,7 @@ cases_names, cases_magnitude, bins_by_cases_n34, bins_by_cases_dmi = \
     SetBinsByCases(indices, magnitudes, bin_limits, cases)
 
 for v in variables:
-
+    logger.info(v)
     if v == 'prec':
         fix = 1 # probando con valores sin fix
         fix_clim = 0
@@ -130,8 +85,9 @@ for v in variables:
     aux_num_comps = {}
     n_count = 0
 
+    logger.info('comp...')
     for c_count, c in enumerate(cases):
-        print('comp --------------------------------------------------------- ')
+        logger.info(f'case: {c}')
         cases_bin, num_bin, auxx = BinsByCases_noComp(
             v=v, v_name=v_in_name, fix_factor=fix, s='SON', mm=10, c=c,
             c_count=c_count,
@@ -166,9 +122,9 @@ for v in variables:
         neutro = neutro.rename({'HGT': 'hgt750'})
         neutro = neutro.sel(P=750)
 
-
+    logger.info('MC...')
     for k in aux_comps.keys(): # son los "cases" de cada categoria
-        print(k)
+        logger.info(k)
         # Borrar archivos temporales ----------------------------------------- #
         files = glob.glob('/pikachu/datos/luciano.andrian/'
                           'observado/ncfiles/nc_comps/' + '*.nc')
@@ -231,11 +187,11 @@ for v in variables:
         else:
             n_proc = 10
 
-        print(f'Procesos: {n_proc}')
+        logger.info(f'Procesos: {n_proc}')
 
         with mp.Pool(processes=n_proc) as pool:
             pool.map(PermuDatesComposite, [n for n in M])
-        print('pool ok')
+        logger.info('pool ok')
         del event, concat
         gc.collect()
 
@@ -247,7 +203,7 @@ for v in variables:
                                 coords="different",
                                 compat="broadcast_equals")
 
-        print(f'Quantiles ------------------------------------------- ')
+        logger.info('Quantiles')
         aux = aux.chunk({'position': -1})
         qt = aux.quantile([.05, .95], dim='position',
                           interpolation='linear')
@@ -257,11 +213,7 @@ for v in variables:
         del qt, aux
         gc.collect()
 
-print('# ------------------------------------------------------------------- #')
-print('# ------------------------------------------------------------------- #')
-print('done')
-print('# ------------------------------------------------------------------- #')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
 
-
-
-
+# ---------------------------------------------------------------------------- #

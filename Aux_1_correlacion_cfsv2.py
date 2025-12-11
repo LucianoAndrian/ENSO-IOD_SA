@@ -2,7 +2,7 @@
 Correlacion entre N34 y prec y tref en CFSv2
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 use_spearman = False
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 
@@ -23,7 +23,11 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from Funciones import PlotFinal, SetDataToPlotFinal
+from funciones.plot_utils import PlotFinal, SetDataToPlotFinal
+from funciones.general_utils import init_logger
+
+# ---------------------------------------------------------------------------- #
+logger = init_logger('Aux_1_correlacion_cfsv2.log')
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -76,13 +80,16 @@ def spearman_correlation(da_field, da_series):
     return result
 
 # Correlation ---------------------------------------------------------------- #
-
+logger.info('Corrlation')
 for i_name in ['N34', 'DMI']:
+    logger.info(f'indice: {i_name}')
+
     indice = xr.open_dataset(f'{index_dir}{i_name}_SON_Leads_r_CFSv2.nc')
     indice = (indice - indice.mean())/indice.std()
 
     corr = []
     for v in ['prec', 'tref']:
+        logger.info(f'Variable: {v}')
 
         var = xr.open_dataset(f'{fields_dir}{v}_son_detrend.nc')
         var = (var - var.mean(['r', 'time'])) / var.std(['r', 'time'])
@@ -102,6 +109,7 @@ for i_name in ['N34', 'DMI']:
             corr.append(xr.corr(indice.sst, var[v], dim=['time', 'r']))
 
     # Plot ------------------------------------------------------------------- #
+    logger.info('Plot')
     aux_v = SetDataToPlotFinal(corr[0], corr[1])
     corr_scale = [-1, -0.75, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 0.75, 1]
     PlotFinal(data=aux_v, levels=corr_scale,
@@ -115,7 +123,7 @@ for i_name in ['N34', 'DMI']:
               high=4, width=6, num_cols=2, pdf=True,
               ocean_mask=True, pcolormesh=True)
 
-print('# --------------------------------------------------------------------#')
-print('# --------------------------------------------------------------------#')
-print('done')
-print('# --------------------------------------------------------------------#')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

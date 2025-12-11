@@ -2,7 +2,7 @@
 Test de Monte Carlo para las composiciones de eventos observados
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/nc_quantiles' \
           '/DMIbase/'
 
@@ -13,11 +13,15 @@ variables = ['HGT200_SON_mer_d_w', 'HGT750_SON_mer_d_w',
 import xarray as xr
 import numpy as np
 from multiprocessing.pool import ThreadPool
-import os
 import glob
-import math
 from datetime import datetime
+from funciones.montecarlo_utils import NumberPerts, CompositeSimple
+from funciones.general_utils import init_logger
+import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+
+# ---------------------------------------------------------------------------- #
+logger = init_logger('9_MonteCarloTest_for_ObsComposite.log')
 
 # ---------------------------------------------------------------------------- #
 data_dir_t_pp = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
@@ -37,64 +41,9 @@ cases = ['DMI_sim_pos', 'DMI_sim_neg', 'DMI_un_pos',
 seasons = ['SON']
 min_max_months = [[9, 11]]
 
-# Functions ------------------------------------------------------------------ #
-def CompositeSimple(original_data, index, mmin, mmax):
-    def is_months(month, mmin, mmax):
-        return (month >= mmin) & (month <= mmax)
-
-    if len(index) != 0:
-        comp_field = original_data.sel(
-            time=original_data.time.dt.year.isin([index]))
-        comp_field = comp_field.sel(
-            time=is_months(month=comp_field['time.month'], mmin=mmin, mmax=mmax))
-        if len(comp_field.time) != 0:
-            comp_field = comp_field.mean(['time'], skipna=True)
-        else:  # si sólo hay un año
-            comp_field = comp_field.drop_dims(['time'])
-
-        return comp_field
-    else:
-        print(' len index = 0')
-
-def NumberPerts(data_to_concat, neutro, num = 0):
-    #si las permutaciones posibles:
-    # > 10000 --> permutaciones = 10000
-    # < 1000 ---> permutaciones = todas las posibles
-    #
-    # si num != 0 permutaciones = num
-
-    total = len(data_to_concat) + len(neutro)
-    len1 = len(neutro)
-    len2 = len(data_to_concat)
-
-    total_perts = math.factorial(total) / (math.factorial(len2) * \
-                                           math.factorial(len1))
-
-    if num == 0:
-        if total_perts >= 10000:
-            tot = 10000
-            print('M = 10000')
-        else:
-            tot = total_perts
-            print('M = ' + str(total_perts))
-
-    else:
-        tot = num
-
-    jump = 9 #10 por .nc que guarde
-    M = []
-    n = 0
-
-    while n < tot:
-        aux = list(np.linspace((0 + n), (n + jump), (jump + 1)))
-        M.append(aux)
-        n = n + jump + 1
-
-    return M
-
 # ---------------------------------------------------------------------------- #
 for v, dir in zip(variables, dirs):
-    print(v)
+    logger.info(v)
     data = xr.open_mfdataset(f'{dir}{v}.nc')
 
     if len(data.sel(lat=slice(20, -60)).lat)>0:
@@ -105,7 +54,6 @@ for v, dir in zip(variables, dirs):
         lat_dec = False
 
     if 'HGT' in v:
-        print('hgt...')
         if lat_dec is True:
             lat_interp = np.arange(-60, 20, 0.5)[::-1]
         else:
@@ -114,10 +62,8 @@ for v, dir in zip(variables, dirs):
         data = data.interp(lat=lat_interp,
                            lon=np.arange(275, 330, 0.5))
 
-    print(data.lat.values)
-
     for c_count, c in enumerate(cases):
-        print(f'{c}-----------------------------------------------------------')
+        logger.info(f'case: {c}')
         for s_count, s in enumerate(seasons):
             print(s)
             # si la proxima tenga menos de 10000 permutaciones
@@ -175,7 +121,6 @@ for v, dir in zip(variables, dirs):
 
                 del comp, data_comp, neutro_new, comp_concat
 
-
             # Fechas de los eventos IODS y Ninios detectados a partir
             # de ERSSTv5 en 1920-2020
             aux = xr.open_dataset(nc_date_dir + '1920_2020_' + s + '.nc')
@@ -197,7 +142,7 @@ for v, dir in zip(variables, dirs):
                     n_thread = 10
                     pool = ThreadPool(10)
 
-                print('Threads: ', n_thread)
+                logger.info('Threads: ', n_thread)
 
                 pool.map(PermuDatesComposite, [n for n in M])
                 pool.close()
@@ -210,7 +155,7 @@ for v, dir in zip(variables, dirs):
                                         coords="different",
                                         compat="broadcast_equals")
 
-                print(f'Quantiles ------------------------------------------- ')
+                logger.infor('Quantiles...')
                 aux = aux.chunk({'time': -1})
                 qt = aux.quantile([.05, .95], dim='time',
                                   interpolation='linear')
@@ -220,9 +165,9 @@ for v, dir in zip(variables, dirs):
                 aux.close()
                 del qt
             else:
-                print('no ' + c)
+                logger.info(f'no {c}')
 
-print('# ------------------------------------------------------------------- #')
-print('# ------------------------------------------------------------------- #')
-print('done')
-print('# ------------------------------------------------------------------- #')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

@@ -2,7 +2,7 @@
 Correlacion entre N34, dmi y prec y tref
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir = '/home/luciano.andrian/doc/ENSO_IOD_SA/salidas/'
 
 variables_tpp = ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25']
@@ -19,7 +19,12 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from Funciones import PlotFinal, SetDataToPlotFinal, Nino34CPC, DMI, SameDateAs
+from funciones.plot_utils import PlotFinal, SetDataToPlotFinal
+from funciones.general_utils import init_logger, SameDateAs
+from funciones.indices_utils import DMI, Nino34CPC
+# ---------------------------------------------------------------------------- #
+logger = init_logger('Aux_2_correlacion_obs.log')
+
 # ---------------------------------------------------------------------------- #
 if save:
     dpi = 300
@@ -64,7 +69,7 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
         return aux
 
 # Correlation ---------------------------------------------------------------- #
-print(' DMI y N34 ---------------------------------------------------------- #')
+logger.info('Correlation: DMI & N34')
 dmi = DMI(filter_bwa=False, start_per=1920, end_per=2020)[2]
 dmi = dmi.sel(time=dmi.time.dt.month.isin(10)) # SON
 dmi = dmi.sel(time=dmi.time.dt.year.isin(np.arange(1940,2021)))
@@ -79,9 +84,11 @@ n34 = SameDateAs(n34, dmi)
 
 
 for i, i_name in zip([n34, dmi], ['N34', 'DMI']):
+    logger.info(f'Indice: {i_name}')
 
     corr = []
     for v in variables_tpp:
+        logger.info(f'Variable: {v}')
         data = OpenObsDataSet(name=v + '_SON', sa=False)
         if v == variables_tpp[1]:
             data['time'] = dmi.time
@@ -99,6 +106,7 @@ for i, i_name in zip([n34, dmi], ['N34', 'DMI']):
         corr.append(xr.corr(i, var[var_name], dim=['time']))
 
     # Plot ------------------------------------------------------------------- #
+    logger.info('Plot')
     aux_v = SetDataToPlotFinal(corr[0], corr[1])
     corr_scale = [-1, -0.75, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 0.75, 1]
     PlotFinal(data=aux_v, levels=corr_scale,
@@ -112,7 +120,7 @@ for i, i_name in zip([n34, dmi], ['N34', 'DMI']):
               high=4, width=6, num_cols=2, pdf=True,
               ocean_mask=True, pcolormesh=True)
 
-print('# --------------------------------------------------------------------#')
-print('# --------------------------------------------------------------------#')
-print('done')
-print('# --------------------------------------------------------------------#')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

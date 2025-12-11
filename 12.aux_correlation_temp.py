@@ -11,10 +11,9 @@ index_dir = '/pikachu/datos/luciano.andrian/DMI_N34_Leads_r/'
 # ---------------------------------------------------------------------------- #
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+import numpy as np
 import xarray as xr
 from matplotlib import colors
-
-import numpy as np
 
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
@@ -22,7 +21,11 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from Funciones import PlotFinal, SetDataToPlotFinal, Nino34CPC, DMI, SameDateAs
+from funciones.indices_utils import DMI, Nino34CPC
+from funciones.general_utils import SameDateAs, init_logger
+from funciones.plot_utils import PlotFinal, SetDataToPlotFinal
+# ---------------------------------------------------------------------------- #
+logger = init_logger('12.aux_correlation_temp.log')
 
 # ---------------------------------------------------------------------------- #
 if save:
@@ -68,13 +71,12 @@ def OpenObsDataSet(name, sa=True, dir='/pikachu/datos/luciano.andrian/'
         return aux
 
 # Correlation - CFSv2 -------------------------------------------------------- #
+logger.info('Correlation CFSv2')
 corr_cfsv2 = []
 for i_name in ['N34', 'DMI']:
     indice = xr.open_dataset(f'{index_dir}{i_name}_SON_Leads_r_CFSv2.nc')
     indice = (indice - indice.mean())/indice.std()
 
-
-    #for v in ['prec', 'tref']:
     for v in ['tref']:
 
         var = xr.open_dataset(f'{fields_dir}{v}_son_detrend.nc')
@@ -83,6 +85,7 @@ for i_name in ['N34', 'DMI']:
         corr_cfsv2.append(xr.corr(indice.sst, var[v], dim=['time', 'r']))
 
 # Correlation - obs ---------------------------------------------------------- #
+logger.info('Correlation obs')
 dmi = DMI(filter_bwa=False, start_per=1920, end_per=2020)[2]
 dmi = dmi.sel(time=dmi.time.dt.month.isin(10)) # SON
 dmi = dmi.sel(time=dmi.time.dt.year.isin(np.arange(1940,2021)))
@@ -95,13 +98,13 @@ n34 = n34.sel(time=n34.time.dt.month.isin(10)) # SON
 n34 = (n34 - n34.mean())/n34.std()
 n34 = SameDateAs(n34, dmi)
 
-#variables_tpp = ['ppgpcc_w_c_d_1', 'tcru_w_c_d_0.25']
 variables_tpp = ['tcru_w_c_d_0.25']
 corr_obs = []
 for i, i_name in zip([n34, dmi], ['N34', 'DMI']):
-
+    logger.info(f'indice: {i_name}')
 
     for v in variables_tpp:
+        logger.info(f'Variable: {v}')
         data = OpenObsDataSet(name=v + '_SON', sa=False)
         if v == 'tcru_w_c_d_0.25':
             data['time'] = dmi.time
@@ -119,7 +122,7 @@ for i, i_name in zip([n34, dmi], ['N34', 'DMI']):
         corr_obs.append(xr.corr(i, var[var_name], dim=['time']))
 
 # ---------------------------------------------------------------------------- #
-
+logger.info('Plot')
 aux_v = SetDataToPlotFinal(corr_cfsv2[0], corr_obs[0],
                            corr_cfsv2[1], corr_obs[1])
 corr_scale = [-1, -0.75, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 0.75, 1]
@@ -131,7 +134,7 @@ PlotFinal(data=aux_v, levels=corr_scale, cmap=mintrose_divergent_13,
           high=3, width=4, num_cols=2, pdf=True,
           ocean_mask=True, pcolormesh=False)
 
-print('# --------------------------------------------------------------------#')
-print('# --------------------------------------------------------------------#')
-print('done')
-print('# --------------------------------------------------------------------#')
+# ---------------------------------------------------------------------------- #
+logger.info('Done')
+
+# ---------------------------------------------------------------------------- #

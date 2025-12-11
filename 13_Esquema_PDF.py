@@ -10,7 +10,11 @@ name_fig = 'sup_esquema_pdf'
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from Funciones import AreaBetween
+from funciones.general_utils import AreaBetween, init_logger
+# ---------------------------------------------------------------------------- #
+logger = init_logger('13_Esquema_PDF.log')
+
+# ---------------------------------------------------------------------------- #
 
 if save:
     dpi = 300
@@ -48,5 +52,8 @@ if save:
     plt.close()
 else:
     plt.show()
+
 # ---------------------------------------------------------------------------- #
+logger.info('Done')
+
 # ---------------------------------------------------------------------------- #
