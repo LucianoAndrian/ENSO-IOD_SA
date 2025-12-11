@@ -8,27 +8,20 @@ save = True
 out_dir = '/pikachu/datos/luciano.andrian/val_clim_cfsv2/'
 out_dir_proc = '/pikachu/datos/luciano.andrian/paper2/salidas_nc/'
 
-variables = ['prec', 'tref']#, 'T09955sigma']#, 'hgt']
-print('# ------------------------------------------------------------------- #')
-print('# Tsigma y hgt no configurado --------------------------------------- #')
-print('# ------------------------------------------------------------------- #')
+variables = ['prec', 'tref']
 # ---------------------------------------------------------------------------- #
 import xarray as xr
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind
-from Funciones import SelectNMMEFiles, ChangeLons
-
-import warnings
-warnings.filterwarnings('ignore')
+from funciones.selectnmmefiles_utils import SelectNMMEFiles
+from funciones.general_utils import ChangeLons, Weights, init_logger
+from funciones.preselect_utils import SetDataCFSv2, SplitFilesByMonotonicity
 
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
-# ---------------------------------------------------------------------------- #
-if save:
-    dpi = 300
-else:
-    dpi = 100
+
+import warnings
+warnings.filterwarnings('ignore')
 
 # Funciones ------------------------------------------------------------------ #
 def fix_calendar(ds, timevar='time'):
@@ -40,96 +33,17 @@ def fix_calendar(ds, timevar='time'):
 
     return ds
 
-def Plot(comp, comp_var, levels, save, dpi, title, name_fig, out_dir, cmap):
-
-    import matplotlib.pyplot as plt
-    import cartopy.feature
-    from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-    import cartopy.crs as ccrs
-
-    fig_size = (5, 6)
-    extent = [270, 330, -60, 20]
-    xticks = np.arange(275, 330+1, 10)
-    yticks = np.arange(-60, 15+1, 10)
-    crs_latlon = ccrs.PlateCarree()
-
-    levels_contour = levels.copy()
-    if isinstance(levels, np.ndarray):
-        levels_contour = levels[levels != 0]
-    else:
-        levels_contour.remove(0)
-
-    fig = plt.figure(figsize=fig_size, dpi=dpi)
-    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
-    ax.set_extent(extent, crs=crs_latlon)
-    im = ax.contourf(comp.lon, comp.lat, comp_var, levels=levels,
-                     transform=crs_latlon, cmap=cmap, extend='both')
-
-    cb = plt.colorbar(im, fraction=0.042, pad=0.035,shrink=0.8)
-    cb.ax.tick_params(labelsize=8)
-    ax.add_feature(cartopy.feature.BORDERS, facecolor='k')
-    ax.add_feature(cartopy.feature.OCEAN, zorder=10, facecolor='white',
-                   edgecolor='k')
-    ax.add_feature(cartopy.feature.COASTLINE)
-    ax.gridlines(crs=crs_latlon, linewidth=0.3, linestyle='-', zorder=12)
-    ax.set_xticks(xticks, crs=crs_latlon)
-    ax.set_yticks(yticks, crs=crs_latlon)
-    # al usar ocean como mascara
-    # y las girdlanes encima
-    # los bordes del plot quedan tapadaos por las gridlines
-    for k, spine in ax.spines.items():
-        spine.set_zorder(13)
-
-    lon_formatter = LongitudeFormatter(zero_direction_label=True)
-    lat_formatter = LatitudeFormatter()
-    ax.xaxis.set_major_formatter(lon_formatter)
-    ax.yaxis.set_major_formatter(lat_formatter)
-    ax.tick_params(labelsize=7)
-
-    plt.title(title, fontsize=10)
-    plt.tight_layout()
-
-    if save:
-        plt.savefig(out_dir + name_fig + '.jpg')
-        plt.close()
-    else:
-        plt.show()
-
-def Weights(data):
-    weights = np.transpose(np.tile(np.cos(data.lat * np.pi / 180),
-                                   (len(data.lon), 1)))
-    data_w = data * weights
-    return data_w
-
 def CheckFiles(dir, files):
     compute = not all(os.path.isfile(os.path.join(dir, f)) for f in files)
     return compute
 
-def SetDataCFSv2(data):
-    data = data.rename({'X': 'lon', 'Y': 'lat', 'M': 'r', 'S': 'time'})
-    data = data.sel(L=[0.5, 1.5, 2.5, 3.5], r=slice(1, 24),
-                    lon=slice(275, 331), lat=slice(-70, 20))
-    data['L'] = [0, 1, 2, 3]
-    data = xr.decode_cf(fix_calendar(data))  # corrigiendo fechas
-
-    return data
-
-def SplitFilesByMonotonicity(files):
-    """ Divide la lista de archivos en segmentos donde el índice S
-    sea monotónico """
-    for i in range(1, len(files)):
-        try:
-            # Intentar abrir los archivos hasta el índice i
-            xr.open_mfdataset(files[:i], decode_times=False)
-        except ValueError as e:
-            if "monotonic global indexes along dimension S" in str(e):
-                return files[:i-1], files[i-1:]
-    return files, []
+# ---------------------------------------------------------------------------- #
+logger = init_logger('5_ClimValidation_prec.log')
 
 # ---------------------------------------------------------------------------- #
 for v in variables:
 
-    print(f'Variable {v}')
+    logger.info(f'Variable {v}')
     # ------------------------------------------------------------------------ #
     files = [f'hindcast_{v}_cfsv2_mc_norm_son.nc',
              f'hindcast_{v}_cfsv2_mc_no-norm_son.nc',
@@ -151,10 +65,8 @@ for v in variables:
     # ------------------------------------------------------------------------ #
     if compute is True:
 
-        print('Compute')
-
-        print('# ----------------------------------------------------------- #')
-        print('Procesando hindcast...')
+        logger.info('Compute')
+        logger.info('Procesando hindcast...')
 
         files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                                 dir=dir_hc, All=True)
@@ -168,9 +80,11 @@ for v in variables:
             data = xr.open_mfdataset(files, decode_times=False)
             data = SetDataCFSv2(data)
 
-        except:
-            print('Error en la monotonia de la dimencion S')
-            print('Usando SplitFilesByMonotonicity...')
+        except Exception as e:
+            logger.warning('Error en la monotonía de la dimensión S')
+            logger.warning('Usando SplitFilesByMonotonicity...')
+            logger.warning(f'Error: {e}')
+
             files0, files1 = SplitFilesByMonotonicity(files)
 
             data0 = xr.open_mfdataset(files0, decode_times=False)
@@ -181,7 +95,7 @@ for v in variables:
 
             data = xr.concat([data0, data1], dim='time')
 
-        print('Open files done')
+        logger.info('Hindcast files opened successfully')
         # -------------------------------------------------------------------- #
 
         # media movil de 3 meses para separar en estaciones
@@ -254,8 +168,8 @@ for v in variables:
             son_hindcast_detrend.to_netcdf(
                 f'{out_dir}hindcast_{v}_cfsv2_mc_detrend_son.nc')
 
-        print('# ----------------------------------------------------------- #')
-        print('procesando realtime...')
+        # -------------------------------------------------------------------- #
+        logger.info('procesando realtime...')
         files = SelectNMMEFiles(model_name='NCEP-CFSv2', variable=v,
                                 dir=dir_rt, All=True)
         files = sorted(files, key=lambda x: x.split()[0])
@@ -268,20 +182,31 @@ for v in variables:
             data = xr.open_mfdataset(files, decode_times=False)
             data = SetDataCFSv2(data)
 
-        except:
-            print('Error en la monotonia de la dimencion S')
-            print('Usando SplitFilesByMonotonicity...')
+        except Exception as e:
+            logger.warning('Error en la monotonía de la dimensión S')
+            logger.warning('Usando SplitFilesByMonotonicity...')
+            logger.warning(f'Error: {e}')
+
             files0, files1 = SplitFilesByMonotonicity(files)
 
-            data0 = xr.open_mfdataset(files0, decode_times=False)
-            data1 = xr.open_mfdataset(files1, decode_times=False)
+            if len(np.intersect1d(files0, files1)) == 0:
 
-            data0 = SetDataCFSv2(data0)
-            data1 = SetDataCFSv2(data1)
+                # Sin embargo, S parece estar duplicada
+                data0 = xr.open_mfdataset(files0, decode_times=False)
+                data1 = xr.open_mfdataset(files1, decode_times=False)
 
-            data = xr.concat([data0, data1], dim='time')
+                data0 = SetDataCFSv2(data0)
+                data1 = SetDataCFSv2(data1)
 
-        print('Open files done')
+                t_duplicados = np.intersect1d(data0.time.values, data1.time.values)
+                no_duplicados = ~np.isin(data0.time.values, t_duplicados)
+                data0 = data0.sel(time=no_duplicados)
+
+                data = xr.concat([data0, data1], dim='time')
+            else:
+                logger.info('Archivos duplicados en la selecciones de RealTime')
+
+        logger.info('Realtime files opened successfully')
         # -------------------------------------------------------------------- #
         # media movil de 3 meses para separar en estaciones
         real_time = data.rolling(time=3, center=True).mean()
@@ -342,8 +267,9 @@ for v in variables:
             f'{out_dir}real_time_{v}_cfsv2_mc_detrend_son.nc')
 
 
+    logger.info('Observed data...')
     if v == 'prec':
-        print('GPCC...')
+        logger.info('GPCC...')
         data_dir_pp_clim = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
                             'data_no_detrend/')
         data = xr.open_dataset(
@@ -375,7 +301,7 @@ for v in variables:
         fix = 30
     elif v=='tref' or v=='T0':
 
-        print('Tcru...')
+        logger.info('Tcru...')
         data_dir_pp_clim = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
                             'data_no_detrend/')
         data = xr.open_dataset(data_dir_pp_clim + 't_cru0.25.nc')
@@ -424,6 +350,8 @@ for v in variables:
 
     # dif_norm = cfsv2_norm.mean(['time', 'r']) - variable_obs_norm.mean('time')
     # dif_norm = Weights(dif_norm)
+
+    logger.info('Test...')
 
     dif_no_norm = cfsv2_no_norm.mean(['time', 'r']) - variable_obs.mean('time')
     dif_no_norm = Weights(dif_no_norm)

@@ -5,21 +5,18 @@ Validación ENSO IOD CFSv2
 save = True
 out_dir = '/pikachu/datos/luciano.andrian/paper2/salidas_nc/'
 
-variables = ['prec', 'tref']#, 'T09955sigma']#, 'hgt']
-print('# ------------------------------------------------------------------- #')
-print('# Tsigma y hgt no configurado --------------------------------------- #')
-print('# ------------------------------------------------------------------- #')
-
+variables = ['prec', 'tref']
 # ---------------------------------------------------------------------------- #
 import xarray as xr
 import numpy as np
+from scipy.stats import ttest_ind
 
 import os
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
 import warnings
 warnings.filterwarnings("ignore")
-from scipy.stats import ttest_ind
+
 
 # ---------------------------------------------------------------------------- #
 nc_date_dir = '/pikachu/datos/luciano.andrian/observado/ncfiles/' \
