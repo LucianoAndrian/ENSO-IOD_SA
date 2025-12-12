@@ -2,7 +2,7 @@
 Seteo de archivos observados
 """
 # ---------------------------------------------------------------------------- #
-save = False
+save = True
 out_dir_era = '/pikachu/datos/luciano.andrian/observado/ncfiles/ERA5/1940_2020/'
 out_dir_p_t = '/pikachu/datos/luciano.andrian/observado/ncfiles/data_obs_d_w_c/'
 

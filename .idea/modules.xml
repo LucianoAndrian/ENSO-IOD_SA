@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ENSO_IOD_SA.iml" filepath="$PROJECT_DIR$/.idea/ENSO_IOD_SA.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ENSO-IOD_SA.iml" filepath="$PROJECT_DIR$/.idea/ENSO-IOD_SA.iml" />
     </modules>
   </component>
 </project>
