@@ -35,8 +35,8 @@ dmi_son = iodw - iode
 # ---------------------------------------------------------------------------- #
 if save_nc is True:
     logger.info('savings...')
-    n34_son.to_netcdf(f'{out_dir}N34_SON_Leads_r_CFSv2_new.nc')
-    dmi_son.to_netcdf(f'{out_dir}DMI_SON_Leads_r_CFSv2_new.nc')
+    n34_son.to_netcdf(f'{out_dir}N34_SON_Leads_r_CFSv2.nc')
+    dmi_son.to_netcdf(f'{out_dir}DMI_SON_Leads_r_CFSv2.nc')
 
 # ---------------------------------------------------------------------------- #
 logger.info('Done')

@@ -43,7 +43,7 @@ del aux
 
 logger.info('Composite')
 for s_count, s in enumerate(seasons):
-    logger.info(f'seasons_name[s_count]')
+    logger.info(f'seasons_name {s_count}')
 
     Neutral, DMI_sim_pos, DMI_sim_neg, DMI_un_pos, DMI_un_neg, N34_un_pos, \
         N34_un_neg, DMI_pos, DMI_neg, N34_pos, N34_neg, DMI_pos_N34_neg, \

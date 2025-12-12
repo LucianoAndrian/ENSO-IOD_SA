@@ -54,8 +54,8 @@ main_month_season = [10]
 for ms, s in zip(main_month_season, seasons):
     logger.info(f'{s} - main month: {ms}')
 
-    n34_season = xr.open_dataset(f'{dates_dir}N34_{s}_Leads_r_CFSv2_new.nc')
-    dmi_season = xr.open_dataset(f'{dates_dir}DMI_{s}_Leads_r_CFSv2_new.nc')
+    n34_season = xr.open_dataset(f'{dates_dir}N34_{s}_Leads_r_CFSv2.nc')
+    dmi_season = xr.open_dataset(f'{dates_dir}DMI_{s}_Leads_r_CFSv2.nc')
 
     # Criterio Niño3.4 - umbral ONI
     data_n34 = n34_season.where(

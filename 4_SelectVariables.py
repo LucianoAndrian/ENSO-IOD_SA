@@ -70,46 +70,44 @@ def Run(var_file, cases, div, cases_dir, data_dir, out_dir,
             p.join()
 
 # ---------------------------------------------------------------------------- #
-
-#logger.info('DMI')
 div = len(cases) // 2
 
-# N34 ------------------------------------------------------------------------- #
+# N34 ------------------------------------------------------------------------ #
 logger.info('N34')
 var_file = 'N34_SON_Leads_r_CFSv2_new.nc'
 Run(var_file, cases, div,
     cases_dir=cases_dir, data_dir=data_dir_dmi_n34,
     out_dir=out_dir, index_compute=True)
 
-# DMI ------------------------------------------------------------------------- #
+# DMI ------------------------------------------------------------------------ #
 logger.info('DMI')
 var_file = 'DMI_SON_Leads_r_CFSv2_new.nc'
 Run(var_file, cases, div,
     cases_dir=cases_dir, data_dir=data_dir_dmi_n34,
     out_dir=out_dir, index_compute=True)
 
-# tref ------------------------------------------------------------------------- #
+# tref ----------------------------------------------------------------------- #
 logger.info('Tref')
 var_file = 'tref_son_detrend.nc'
 Run(var_file, cases, div,
     cases_dir=cases_dir, data_dir=data_dir, out_dir=out_dir,
     index_compute=False, end_file='detrend_05')
 
-# prec ------------------------------------------------------------------------- #
+# prec ----------------------------------------------------------------------- #
 logger.info('Prec')
 var_file = 'prec_son_detrend.nc'
 Run(var_file, cases, div,
     cases_dir=cases_dir, data_dir=data_dir, out_dir=out_dir,
     index_compute=False, end_file='detrend_05')
 
-# hgt750 ------------------------------------------------------------------------- #
+# hgt750 --------------------------------------------------------------------- #
 logger.info('hgt750')
 var_file = 'hgt750_son_detrend.nc'
 Run(var_file, cases, div,
     cases_dir=cases_dir, data_dir=data_dir, out_dir=out_dir,
     index_compute=False, end_file='detrend_05')
 
-# hgt ------------------------------------------------------------------------- #
+# hgt ------------------------------------------------------------------------ #
 logger.info('hgt')
 var_file = 'hgt_son.nc'
 Run(var_file, cases, div,
