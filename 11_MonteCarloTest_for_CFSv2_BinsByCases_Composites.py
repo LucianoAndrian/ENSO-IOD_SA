@@ -8,7 +8,6 @@ out_dir = ('/pikachu/datos/luciano.andrian/observado/ncfiles/'
            'CFSv2_nc_quantiles/')
 
 variables = ['prec', 'tref', 'hgt', 'hgt750']
-variables = ['hgt', 'hgt750']
 cases = ['sim_pos', 'sim_neg',
          'dmi_puros_pos', 'dmi_puros_neg',
          'n34_puros_pos', 'n34_puros_neg']
@@ -68,10 +67,12 @@ for v in variables:
         fix = 1 # probando con valores sin fix
         fix_clim = 0
         v_in_name = v
+        check_no_t_pp = False
     elif v=='tref':
         fix = 1
         fix_clim = 273
         v_in_name = v
+        check_no_t_pp = False
     else:
         fix = 9.8
         fix_clim = 0

@@ -134,7 +134,7 @@ for v in variables:
                                 coords="different",
                                 compat="broadcast_equals")
 
-        logger.infor('Quantiles...')
+        logger.info('Quantiles...')
         aux = aux.chunk({'position': -1})
         qt = aux.quantile([.05, .95], dim='position',
                           interpolation='linear')
