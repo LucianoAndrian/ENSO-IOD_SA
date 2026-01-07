@@ -274,9 +274,9 @@ def PlotFinal(data, levels, cmap, titles, namefig, map, save, dpi, out_dir,
             if map.upper() == 'SA':
                 ax.add_feature(cartopy.feature.BORDERS, alpha=1,
                                linestyle='-', linewidth=0.2, color='k')
-            gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
-                              zorder=20)
-            gl.ylocator = plt.MultipleLocator(20)
+            # gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
+            #                   zorder=20)
+            # gl.ylocator = plt.MultipleLocator(20)
             ax.set_xticks(np.arange(0, 360, step_lon), crs=crs_latlon)
             ax.set_yticks(np.arange(-80, 20, 20), crs=crs_latlon)
             ax.tick_params(width=0.5, pad=1)
@@ -474,11 +474,11 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                         transform=ax_new.transAxes, size=4)
                 i2 += 1
                 ax_new.set_title('Climatology', fontsize=4, pad=1)
-                gl = ax_new.gridlines(draw_labels=False, linewidth=0.3,
-                                      linestyle='-', zorder=20)
-
-                gl.ylocator = plt.MultipleLocator(20)
-                gl.xlocator = plt.MultipleLocator(60)
+                # gl = ax_new.gridlines(draw_labels=False, linewidth=0.3,
+                #                       linestyle='-', zorder=20)
+                #
+                # gl.ylocator = plt.MultipleLocator(20)
+                # gl.xlocator = plt.MultipleLocator(60)
 
                 if plot_regiones is True:
                     names_regiones_sa = ['Am', 'NeB', 'N-SESA', 'S-SESA',
@@ -597,10 +597,10 @@ def PlotFinal_CompositeByMagnitude(data, levels, cmap, titles, namefig, map,
                                linewidth=0.5)
                 ax.coastlines(color='k', linestyle='-', alpha=1, linewidth=0.2,
                               resolution='110m')
-                gl = ax.gridlines(draw_labels=False, linewidth=0.1,
-                                  linestyle='-', zorder=20)
-                gl.ylocator = plt.MultipleLocator(20)
-                gl.xlocator = plt.MultipleLocator(lon_localator)
+                # gl = ax.gridlines(draw_labels=False, linewidth=0.1,
+                #                   linestyle='-', zorder=20)
+                # gl.ylocator = plt.MultipleLocator(20)
+                # gl.xlocator = plt.MultipleLocator(lon_localator)
 
             else:
                 remove_axes = True
@@ -662,7 +662,7 @@ def PlotPdfs(data, selected_cases, width=5, high=1.2, title='', namefig='fig',
             ax.plot(aux_case, lw=2.5, color=color_case[c_count], label=c)
             max_y.append(max(aux_case))
 
-        ax.grid(alpha=0.5)
+        # ax.grid(alpha=0.5)
         ax.legend(loc='best')
         ax.set_ylim(0, max(max_y) + 0.001)
 
@@ -712,7 +712,7 @@ def PlotBars(x, bin_n, bin_n_err, bin_n_len,
     ax2.set_ylabel('number of samples', fontsize=10)
     ax.set_xlabel('SST index (of std)', fontsize=15)
     ax.xaxis.set_tick_params(labelsize=12)
-    ax.grid(True)
+    #ax.grid(True)
     plt.title(title, fontsize=15)
     plt.xlim(-3.5, 3.5)
 
@@ -752,7 +752,7 @@ def PlotPDFTable(df, cmap, levels, title, name_fig='fig',
     ax.set_xticks(np.arange(-0.5, df.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, df.shape[0], 1), minor=True)
 
-    ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
+    #ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
     ax.tick_params(which='minor', bottom=False, left=False)
 
     fig.suptitle(title, size=12)
@@ -919,9 +919,9 @@ def PlotFinalTwoVariables(data, num_cols,
 
             ax.add_feature(cartopy.feature.BORDERS, alpha=1,
                                linestyle='-', linewidth=0.2, color='k')
-            gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
-                              zorder=20)
-            gl.ylocator = plt.MultipleLocator(20)
+            # gl = ax.gridlines(draw_labels=False, linewidth=0.1, linestyle='-',
+            #                   zorder=20)
+            # gl.ylocator = plt.MultipleLocator(20)
             ax.set_xticks(np.arange(0, 360, step_lon), crs=crs_latlon)
             ax.set_yticks(np.arange(-80, 20, 20), crs=crs_latlon)
             ax.tick_params(width=0.5, pad=1)
@@ -1050,7 +1050,7 @@ def PlotBins2DTwoVariables(data_bins, num_bins, bin_limits, num_cols,
                        linewidth=2)
 
             ax.margins(0)
-            ax.grid(which='major', alpha=0.5, color='k')
+            #ax.grid(which='major', alpha=0.5, color='k')
             if plot == 0 or plot == change_row:
                 ax.set_ylabel(ylabel)
                 first = False

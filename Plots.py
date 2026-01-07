@@ -22,12 +22,12 @@ warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 warnings.filterwarnings("ignore")
 
 from funciones.composite_utils import CaseComp
-from funciones.general_utils import RenameDataset, MakeMask, AreaBetween, \
+from funciones.general_utils import RenameDataset, AreaBetween, \
     PDF_cases, init_logger, MakerMaskSig, Weights
 from funciones.plot_utils import SetDataToPlotFinal, PlotFinal, \
-    PlotFinal_CompositeByMagnitude, PlotPdfs, PlotBars, PlotPDFTable, \
-    PlotFinalTwoVariables, PlotBins2DTwoVariables
-from funciones.binsbycases_utils import SelectBins2D, SelectDatesBins, SetBinsByCases, BinsByCases
+    PlotFinal_CompositeByMagnitude, PlotPdfs, PlotPDFTable, \
+    PlotFinalTwoVariables
+from funciones.binsbycases_utils import SetBinsByCases, BinsByCases
 # ---------------------------------------------------------------------------- #
 logger = init_logger('Plots.log')
 
@@ -569,12 +569,12 @@ pos_comp_hgt750_toplot = xr.concat(pos_comp_hgt750+pos_comp_hgt750, dim='plots')
 neg_comp_hgt750_toplot = xr.concat(neg_comp_hgt750+neg_comp_hgt750, dim='plots')
 
 
-title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD',
-                   'Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD']
+title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño and pos. IOD',
+                   'Pure El Niño', 'Pure positive IOD', 'El Niño and pos. IOD']
 
 
-title_neg_cases = ['Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD',
-                   'Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD']
+title_neg_cases = ['Pure La Niña', 'Pure negative IOD', 'La Niña and neg. IOD',
+                   'Pure La Niña', 'Pure negative IOD', 'La Niña and neg. IOD']
 
 plt.rcParams['hatch.linewidth'] = 1
 PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
@@ -795,11 +795,11 @@ neg_snr_hgt750_200_toplot = xr.concat(neg_snr_hgt750_200, dim='plots')
 pos_comp_hgt750_toplot = xr.concat(pos_comp_hgt750+pos_comp_hgt750, dim='plots')
 neg_comp_hgt750_toplot = xr.concat(neg_comp_hgt750+neg_comp_hgt750, dim='plots')
 
-title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD',
-                   'Pure El Niño', 'Pure positive IOD', 'El Niño & pos. IOD']
+title_pos_cases = ['Pure El Niño', 'Pure positive IOD', 'El Niño and pos. IOD',
+                   'Pure El Niño', 'Pure positive IOD', 'El Niño and pos. IOD']
 
-title_neg_cases = ['Pure  La Niña', 'Pure negative IOD', 'La Niña & neg. IOD',
-                   'Pure La Niña', 'Pure negative IOD', 'La Niña & neg. IOD']
+title_neg_cases = ['Pure  La Niña', 'Pure negative IOD', 'La Niña and neg. IOD',
+                   'Pure La Niña', 'Pure negative IOD', 'La Niña and neg. IOD']
 
 plt.rcParams['hatch.linewidth'] = 1
 PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
