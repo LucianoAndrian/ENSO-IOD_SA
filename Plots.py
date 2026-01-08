@@ -336,8 +336,13 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
                                iod_cfsv2_dif*0,
                                enso_cfsv2_dif, iod_cfsv2_dif)
 
+
+    if v == 'tref':
+        namefig_val = 'figureS5'
+    elif v == 'prec':
+        namefig_val = 'figureS4'
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
-              titles=['', '', '', '', '', ''], namefig=f'validation_{v}',
+              titles=['', '', '', '', '', ''], namefig=namefig_val,
               map='sa', save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=None, levels_ctn=v_scale, color_ctn='k',
               data_ctn2=None, levels_ctn2=None,
@@ -354,9 +359,12 @@ for v, v_scale, v_cbar in zip(variables, aux_scales, aux_cbar):
 
     aux_v = SetDataToPlotFinal(enso_cfsv2_dif-enso_obs_dif_interp,
                                iod_cfsv2_dif-iod_obs_dif_interp)
-
+    if v == 'tref':
+        namefig_difval = 'figureS7'
+    elif v == 'prec':
+        namefig_difval = 'figureS6'
     PlotFinal(data=aux_v, levels=v_scale, cmap=v_cbar,
-              titles=['', '', '', '', '', ''], namefig=f'diff_validation_{v}',
+              titles=['', '', '', '', '', ''], namefig=namefig_difval,
               map='sa', save=save, dpi=dpi, out_dir=out_dir,
               data_ctn=None, levels_ctn=v_scale, color_ctn='k',
               data_ctn2=None, levels_ctn2=None,
@@ -440,7 +448,7 @@ PlotFinalTwoVariables(data=aux_v, num_cols=4,
                       levels_r2=scale_t, cmap_r2=cbar,
                       data_ctn=aux_hgt750, levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt_750, color_ctn='k',
-                      titles=subtitulos_regre, namefig='regre_pp_t',
+                      titles=subtitulos_regre, namefig='figure1',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=2.5, width = 7.7, step=1,
@@ -455,7 +463,7 @@ PlotFinalTwoVariables(data=aux_hgt750_200, num_cols=4,
                       levels_r2=scale_hgt, cmap_r2=cbar,
                       data_ctn=aux_hgt750_200, levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt, color_ctn='k',
-                      titles=subtitulos_regre, namefig='regre_hgt200_750',
+                      titles=subtitulos_regre, namefig='figureS1',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=2.5, width = 7.7, step=1,
@@ -583,7 +591,7 @@ PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
                       data_ctn=pos_comp_hgt750_toplot,
                       levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt_750, color_ctn='k',
-                      titles=title_pos_cases, namefig='comp_pp_t_pos',
+                      titles=title_pos_cases, namefig='figure2',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -598,7 +606,7 @@ PlotFinalTwoVariables(data=neg_comp_pp_t_toplot, num_cols=3,
                       data_ctn=neg_comp_hgt750_toplot,
                       levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt_750, color_ctn='k',
-                      titles=title_neg_cases, namefig='comp_pp_t_neg',
+                      titles=title_neg_cases, namefig='figure3',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -614,7 +622,7 @@ PlotFinalTwoVariables(data=pos_comp_hgt750_200_toplot, num_cols=3,
                       data_ctn=pos_comp_hgt750_200_toplot,
                       levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt, color_ctn='k',
-                      titles=title_pos_cases, namefig='comp_hgt200_750_pos',
+                      titles=title_pos_cases, namefig='figureS2',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -629,7 +637,7 @@ PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
                       data_ctn=neg_comp_hgt750_200_toplot,
                       levels_ctn_r1=scale_hgt_750,
                       levels_ctn_r2=scale_hgt, color_ctn='k',
-                      titles=title_neg_cases, namefig='comp_hgt200_750_neg',
+                      titles=title_neg_cases, namefig='figureS3',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -808,7 +816,7 @@ PlotFinalTwoVariables(data=pos_comp_pp_t_toplot, num_cols=3,
                       data_ctn=pos_comp_hgt750_toplot,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt, color_ctn='k',
-                      titles=title_pos_cases, namefig='comp_cfsv2_pp_t_pos',
+                      titles=title_pos_cases, namefig='figure4',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -823,7 +831,7 @@ PlotFinalTwoVariables(data=pos_snr_pp_t_toplot, num_cols=3,
                       data_ctn=None,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt, color_ctn='k',
-                      titles=title_pos_cases, namefig='snr_cfsv2_pp_t_pos',
+                      titles=title_pos_cases, namefig='figureS10',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -838,7 +846,7 @@ PlotFinalTwoVariables(data=pos_comp_hgt750_200_toplot, num_cols=3,
                       data_ctn=pos_comp_hgt750_200_toplot,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt200, color_ctn='k',
-                      titles=title_pos_cases, namefig='comp_cfsv2_hgt_pos',
+                      titles=title_pos_cases, namefig='figureS8',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -853,7 +861,7 @@ PlotFinalTwoVariables(data=neg_comp_pp_t_toplot, num_cols=3,
                       data_ctn=neg_comp_hgt750_toplot,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt, color_ctn='k',
-                      titles=title_neg_cases, namefig='comp_cfsv2_pp_t_neg',
+                      titles=title_neg_cases, namefig='figure5',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -868,7 +876,7 @@ PlotFinalTwoVariables(data=neg_snr_pp_t_toplot, num_cols=3,
                       data_ctn=None,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt, color_ctn='k',
-                      titles=title_neg_cases, namefig='snr_cfsv2_pp_t_neg',
+                      titles=title_neg_cases, namefig='figureS11',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -883,7 +891,7 @@ PlotFinalTwoVariables(data=neg_comp_hgt750_200_toplot, num_cols=3,
                       data_ctn=neg_comp_hgt750_200_toplot,
                       levels_ctn_r1=aux_scale_hgt,
                       levels_ctn_r2=aux_scale_hgt200, color_ctn='k',
-                      titles=title_neg_cases, namefig='comp_cfsv2_hgt_neg',
+                      titles=title_neg_cases, namefig='figureS9',
                       save=save, dpi=dpi,
                       out_dir=out_dir, pdf=True,
                       high=3, width = 7, step=1,
@@ -1180,9 +1188,17 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         clim = clim_hgt
         ocean_mask = False
 
+    if v == 'tref':
+        namefig = 'figure7'
+    elif v == 'prec':
+        namefig = 'figure6'
+    elif v == 'hgt750':
+        namefig = 'figureS12'
+    elif v == 'hgt200':
+        namefig = 'figureS13'
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
                                    cmap=v_cbar, titles=aux_num,
-                                   namefig=f'{v}_cfsv2_comp_by_magnitude',
+                                   namefig=namefig,
                                    map='sa', save=save, dpi=dpi,
                                    out_dir=out_dir,
                                    data_ctn=cases_ordenados_hgt,
@@ -1203,29 +1219,30 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
                                    plot_regiones=plot_regiones)
 
     # SNR plot
-    if check_t_pp is True:
-        data_ctn_snr = None
-    else:
-        data_ctn_snr = cases_ordenados_snr
-    PlotFinal_CompositeByMagnitude(data=cases_ordenados_snr, levels=scale_snr,
-                                   cmap=v_cbar_snr, titles=aux_num,
-                                   namefig=f'snr_{v}_cfsv2_comp_by_magnitude',
-                                   map='sa', save=save, dpi=dpi,
-                                   out_dir=out_dir,
-                                   data_ctn=data_ctn_snr,
-                                   levels_ctn = scale_snr,
-                                   color_ctn='k', row_titles=row_titles,
-                                   col_titles=col_titles, clim_plot=clim,
-                                   clim_cbar=v_cbar_clim,
-                                   clim_levels=v_scale_clim,
-                                   high=1.5, width=5.5,
-                                   clim_plot_ctn=None,
-                                   clim_levels_ctn=np.linspace(1.1e5,1.2e5,11),
-                                   ocean_mask=ocean_mask,
-                                   data_ctn_no_ocean_mask=True,
-                                   plot_step=1,
-                                   cbar_pos='V',
-                                   plot_regiones=False)
+    # if check_t_pp is True:
+    #     data_ctn_snr = None
+    # else:
+    #     data_ctn_snr = cases_ordenados_snr
+    #
+    # PlotFinal_CompositeByMagnitude(data=cases_ordenados_snr, levels=scale_snr,
+    #                                cmap=v_cbar_snr, titles=aux_num,
+    #                                namefig=f'snr_{v}_cfsv2_comp_by_magnitude',
+    #                                map='sa', save=save, dpi=dpi,
+    #                                out_dir=out_dir,
+    #                                data_ctn=data_ctn_snr,
+    #                                levels_ctn = scale_snr,
+    #                                color_ctn='k', row_titles=row_titles,
+    #                                col_titles=col_titles, clim_plot=clim,
+    #                                clim_cbar=v_cbar_clim,
+    #                                clim_levels=v_scale_clim,
+    #                                high=1.5, width=5.5,
+    #                                clim_plot_ctn=None,
+    #                                clim_levels_ctn=np.linspace(1.1e5,1.2e5,11),
+    #                                ocean_mask=ocean_mask,
+    #                                data_ctn_no_ocean_mask=True,
+    #                                plot_step=1,
+    #                                cbar_pos='V',
+    #                                plot_regiones=False)
 
 # ---------------------------------------------------------------------------- #
 logger.info('Done CFSv2 Composite by magnitude')
@@ -1268,11 +1285,16 @@ for v, v_cbar in zip(['tref', 'prec'], [cbar_bins2d, cbar_pp_bins2d]):
     df.index = ['EN', 'IODp', 'EN-IODp', 'LN', 'IODn', 'LN-IODn']
 
     logger.info(f'Plot Table...')
+    if v == 'tref':
+        namefig_pdf = 'figure9'
+    elif v == 'prec':
+        namefig_pdf = 'figure8'
+
     PlotPDFTable(np.round(df.transpose(), 2), cmap=v_cbar,
                  levels=[-1, -0.8, -0.6, -0.4, -0.2, -0.1,
                          0, 0.1, 0.2, 0.4, 0.6, 0.8, 1],
                  title='',
-                 save=save, name_fig=f'pdf_table_{v}',
+                 save=save, name_fig=namefig_pdf,
                  out_dir=out_dir, dpi=dpi,
                  color_thr=1)
 

@@ -48,7 +48,7 @@ ax.set_ylabel("Density")
 ax.legend(frameon=False)
 plt.tight_layout()
 if save:
-    plt.savefig(f"{out_dir}{name_fig}.pdf", dpi=dpi, bbox_inches='tight')
+    plt.savefig(f"{out_dir}figureS14.pdf", dpi=dpi, bbox_inches='tight')
     plt.close()
 else:
     plt.show()

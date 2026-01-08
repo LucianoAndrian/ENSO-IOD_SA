@@ -128,7 +128,7 @@ aux_v = SetDataToPlotFinal(corr_cfsv2[0], corr_obs[0],
 corr_scale = [-1, -0.75, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 0.75, 1]
 PlotFinal(data=aux_v, levels=corr_scale, cmap=mintrose_divergent_13,
           titles=['','','',''],
-          namefig=f'fig_sup_corr',
+          namefig=f'figureS15',
           map='sa', save=save, dpi=dpi, out_dir=out_dir,
           data_ctn=aux_v, color_ctn='k', levels_ctn=corr_scale,
           high=3, width=4, num_cols=2, pdf=True,
