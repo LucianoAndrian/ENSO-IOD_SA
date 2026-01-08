@@ -1194,7 +1194,7 @@ for v, v_scale, v_cbar, v_scale_clim, v_cbar_clim, v_cbar_snr in zip(
         namefig = 'figure6'
     elif v == 'hgt750':
         namefig = 'figureS12'
-    elif v == 'hgt200':
+    elif v == 'hgt':
         namefig = 'figureS13'
     PlotFinal_CompositeByMagnitude(data=cases_ordenados, levels=v_scale,
                                    cmap=v_cbar, titles=aux_num,
